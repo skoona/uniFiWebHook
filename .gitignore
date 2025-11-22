@@ -1,0 +1,5 @@
+.pio/*
+build/*
+managed_components/*
+.vscode
+/build/
