@@ -173,11 +173,15 @@ static esp_err_t app_touch_init(void)
             .mirror_y = 0,
         },
     };
+/*
     esp_lcd_panel_io_handle_t tp_io_handle = NULL;
+
     esp_lcd_panel_io_i2c_config_t tp_io_config = ESP_LCD_TOUCH_IO_I2C_GT1151_CONFIG();
     tp_io_config.scl_speed_hz = EXAMPLE_TOUCH_I2C_CLK_HZ;
     ESP_RETURN_ON_ERROR(esp_lcd_new_panel_io_i2c(i2c_handle, &tp_io_config, &tp_io_handle), TAG, "");
     return esp_lcd_touch_new_i2c_gt1151(tp_io_handle, &tp_cfg, &touch_handle);
+*/
+ return ESP_FAIL;
 }
 
 static esp_err_t app_lvgl_init(void)

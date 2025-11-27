@@ -1,5 +1,6 @@
 dependencies:
-  esp_lvgl_port:
-    version: '*'
-  idf: '>=5.0'
-  cfscn/esp_lcd_touch_ft6x36: ^1.0.8
+  idf: '>=5.5.1'
+  lvgl/lvgl: '^9.4.0'
+  atanisoft/esp_lcd_ili9488: '*'
+  cfscn/esp_lcd_touch_ft6x36: '*'
+  espressif/esp_lv_decoder: '*'
