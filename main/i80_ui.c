@@ -12,8 +12,10 @@
 #endif
 
 // LVGL image declare
-LV_IMG_DECLARE(esp_logo)
-LV_IMG_DECLARE(esp_text)
+/*
+LV_IMG_DECLARE(skoonaIcon)
+LV_IMG_DECLARE(skoonallc)
+*/
 
 typedef struct {
     lv_obj_t *scr;
@@ -21,8 +23,8 @@ typedef struct {
 } my_timer_context_t;
 
 static lv_obj_t *arc[3];
-static lv_obj_t *img_logo;
-static lv_obj_t *img_text;
+// static lv_obj_t *img_logo; 
+// static lv_obj_t *img_text;
 static lv_color_t arc_color[] = {
     LV_COLOR_MAKE(232, 87, 116),
     LV_COLOR_MAKE(126, 87, 162),
@@ -51,10 +53,11 @@ static void anim_timer_cb(lv_timer_t *timer)
         for (size_t i = 0; i < sizeof(arc) / sizeof(arc[0]); i++) {
             lv_obj_del(arc[i]);
         }
-
+    }
+/*
         // Create new image and make it transparent
         img_text = lv_img_create(scr);
-        lv_img_set_src(img_text, &esp_text);
+        lv_img_set_src(img_text, &skoonallc);
         lv_obj_set_style_img_opa(img_text, 0, 0);
     }
 
@@ -65,22 +68,22 @@ static void anim_timer_cb(lv_timer_t *timer)
         lv_obj_align(img_text, LV_ALIGN_CENTER, 0, 2 * offset);
         lv_obj_set_style_img_opa(img_text, offset / 40.0f * 255, 0);
     }
-
+*/
     // Delete timer when all animation finished
-    if ((count += 5) == 220) {
+    if ((count += 5) == 440) {
         lv_timer_del(timer);
     } else {
         timer_ctx->count_val = count;
     }
 }
 
-void example_lvgl_demo_ui(lv_obj_t *scr)
-{
+void skoona_demo_ui(lv_obj_t *scr) {
     // Create image
+/*    
     img_logo = lv_img_create(scr);
-    lv_img_set_src(img_logo, &esp_logo);
+    lv_img_set_src(img_logo, &skoonaIcon);
     lv_obj_center(img_logo);
-
+*/
     // Create arcs
     for (size_t i = 0; i < sizeof(arc) / sizeof(arc[0]); i++) {
         arc[i] = lv_arc_create(scr);

@@ -15,9 +15,9 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "lvgl.h"
-#include "esp_lcd_ili9488.h"
+#include <esp_lcd_ili9488.h>
 
-static const char *TAG = "example";
+static const char *TAG = "skoona";
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////// Please update the following configuration according to your LCD spec //////////////////////////////
@@ -36,7 +36,6 @@ static const char *TAG = "example";
 #define EXAMPLE_PIN_NUM_DATA5          11
 #define EXAMPLE_PIN_NUM_DATA6          10
 #define EXAMPLE_PIN_NUM_DATA7          9
-#if EXAMPLE_LCD_I80_BUS_WIDTH > 8
 #define EXAMPLE_PIN_NUM_DATA8          3
 #define EXAMPLE_PIN_NUM_DATA9          8
 #define EXAMPLE_PIN_NUM_DATA10         16
@@ -45,11 +44,11 @@ static const char *TAG = "example";
 #define EXAMPLE_PIN_NUM_DATA13         6
 #define EXAMPLE_PIN_NUM_DATA14         5
 #define EXAMPLE_PIN_NUM_DATA15         4
-#endif
+
 #define EXAMPLE_PIN_NUM_PCLK           18
 #define EXAMPLE_PIN_NUM_CS             -1
 #define EXAMPLE_PIN_NUM_DC             45
-#define EXAMPLE_PIN_NUM_RST            -1
+#define EXAMPLE_PIN_NUM_RST            48
 #define EXAMPLE_PIN_NUM_BK_LIGHT       46
 
 // The pixel number in horizontal and vertical
@@ -61,7 +60,7 @@ static const char *TAG = "example";
 
 #define EXAMPLE_LVGL_TICK_PERIOD_MS    2
 
-extern void example_lvgl_demo_ui(lv_obj_t *scr);
+extern void skoona_demo_ui(lv_obj_t *scr);
 
 static bool example_notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
 {
@@ -103,9 +102,7 @@ void app_main(void)
     ESP_LOGI(TAG, "Initialize Intel 8080 bus");
     esp_lcd_i80_bus_handle_t i80_bus = NULL;
     esp_lcd_i80_bus_config_t bus_config = {
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
         .clk_src = LCD_CLK_SRC_DEFAULT,
-#endif
         .dc_gpio_num = EXAMPLE_PIN_NUM_DC,
         .wr_gpio_num = EXAMPLE_PIN_NUM_PCLK,
         .data_gpio_nums = {
@@ -117,7 +114,6 @@ void app_main(void)
             EXAMPLE_PIN_NUM_DATA5,
             EXAMPLE_PIN_NUM_DATA6,
             EXAMPLE_PIN_NUM_DATA7,
-#if EXAMPLE_LCD_I80_BUS_WIDTH > 8
             EXAMPLE_PIN_NUM_DATA8,
             EXAMPLE_PIN_NUM_DATA9,
             EXAMPLE_PIN_NUM_DATA10,
@@ -126,12 +122,13 @@ void app_main(void)
             EXAMPLE_PIN_NUM_DATA13,
             EXAMPLE_PIN_NUM_DATA14,
             EXAMPLE_PIN_NUM_DATA15,
-#endif
+
         },
         .bus_width = EXAMPLE_LCD_I80_BUS_WIDTH,
-        .max_transfer_bytes = EXAMPLE_LCD_H_RES * 40 * sizeof(uint16_t)
+        .max_transfer_bytes = EXAMPLE_LCD_H_RES * 100 * sizeof(uint16_t)
     };
     ESP_ERROR_CHECK(esp_lcd_new_i80_bus(&bus_config, &i80_bus));
+
     esp_lcd_panel_io_handle_t io_handle = NULL;
     esp_lcd_panel_io_i80_config_t io_config = {
         .cs_gpio_num = EXAMPLE_PIN_NUM_CS,
@@ -154,20 +151,16 @@ void app_main(void)
     esp_lcd_panel_handle_t panel_handle = NULL;
     esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = EXAMPLE_PIN_NUM_RST,
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
         .color_space = ESP_LCD_COLOR_SPACE_RGB,
-#else
-        .rgb_ele_order = COLOR_SPACE_RGB,
-#endif
         .bits_per_pixel = 16,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_ili9488(io_handle, &panel_config,EXAMPLE_LCD_H_RES * 20 * sizeof(lv_color_t), &panel_handle));
 
     esp_lcd_panel_reset(panel_handle);
     esp_lcd_panel_init(panel_handle);
-    esp_lcd_panel_invert_color(panel_handle, true);
+    esp_lcd_panel_invert_color(panel_handle, false);
     // the gap is LCD panel specific, even panels with the same driver IC, can have different gap value
-    esp_lcd_panel_set_gap(panel_handle, 0, 20);
+    esp_lcd_panel_set_gap(panel_handle, 0, 0);
 
     ESP_LOGI(TAG, "Turn on LCD backlight");
     gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL);
@@ -204,9 +197,15 @@ void app_main(void)
 
     ESP_LOGI(TAG, "Display LVGL animation");
     lv_obj_t *scr = lv_disp_get_scr_act(disp);
-    example_lvgl_demo_ui(scr);
 
-    while (1) {
+    lv_obj_t *label = lv_label_create(scr);
+	lv_label_set_text(label, "Hello World!");
+	lv_obj_center(label);
+	
+
+		skoona_demo_ui(scr);
+
+	while (1) {
         // raise the task priority of LVGL and/or reduce the handler period can improve the performance
         vTaskDelay(pdMS_TO_TICKS(10));
         // The task running lv_timer_handler should have lower priority than that running `lv_tick_inc`

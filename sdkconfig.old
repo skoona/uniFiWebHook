@@ -635,6 +635,18 @@ CONFIG_COMPILER_ORPHAN_SECTIONS_WARNING=y
 #
 
 #
+# !!! MINIMAL_BUILD is enabled !!!
+#
+
+#
+# Only common components and those transitively required by the main component are listed
+#
+
+#
+# If a component configuration is missing, please add it to the main component's requirements
+#
+
+#
 # Driver Configurations
 #
 
@@ -1582,11 +1594,6 @@ CONFIG_ESP_LCD_TOUCH_MAX_BUTTONS=1
 # end of ESP LCD TOUCH
 
 #
-# ESP LVGL PORT
-#
-# end of ESP LVGL PORT
-
-#
 # LVGL configuration
 #
 CONFIG_LV_CONF_SKIP=y
@@ -1737,7 +1744,7 @@ CONFIG_LV_ATTRIBUTE_MEM_ALIGN_SIZE=1
 CONFIG_LV_ATTRIBUTE_FAST_MEM_USE_IRAM=y
 # CONFIG_LV_USE_FLOAT is not set
 # CONFIG_LV_USE_MATRIX is not set
-CONFIG_LV_USE_PRIVATE_API=y
+# CONFIG_LV_USE_PRIVATE_API is not set
 # end of Compiler Settings
 
 #
@@ -1907,14 +1914,8 @@ CONFIG_LV_USE_GRID=y
 # 3rd Party Libraries
 #
 CONFIG_LV_FS_DEFAULT_DRIVER_LETTER=83
-CONFIG_LV_USE_FS_STDIO=y
-CONFIG_LV_FS_STDIO_LETTER=83
-CONFIG_LV_FS_STDIO_PATH=""
-CONFIG_LV_FS_STDIO_CACHE_SIZE=0
-CONFIG_LV_USE_FS_POSIX=y
-CONFIG_LV_FS_POSIX_LETTER=83
-CONFIG_LV_FS_POSIX_PATH=""
-CONFIG_LV_FS_POSIX_CACHE_SIZE=0
+# CONFIG_LV_USE_FS_STDIO is not set
+# CONFIG_LV_USE_FS_POSIX is not set
 # CONFIG_LV_USE_FS_WIN32 is not set
 # CONFIG_LV_USE_FS_FATFS is not set
 # CONFIG_LV_USE_FS_MEMFS is not set
