@@ -77,7 +77,7 @@ static void anim_timer_cb(lv_timer_t *timer)
     }
 }
 
-void skoona_demo_ui(lv_obj_t *scr) {
+void skn_demo_ui(lv_obj_t *scr) {
     // Create image
 /*    
     img_logo = lv_img_create(scr);

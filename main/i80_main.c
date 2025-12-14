@@ -15,61 +15,63 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "lvgl.h"
-#include <esp_lcd_ili9488.h>
+#include "esp_lcd_ili9488.h"
+#include "esp_lcd_touch_ft6x36.h"
 
-static const char *TAG = "skoona";
+static const char *TAG = "SKN";
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////// Please update the following configuration according to your LCD spec //////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define EXAMPLE_LCD_PIXEL_CLOCK_HZ     (10 * 1000 * 1000)
-#define EXAMPLE_LCD_I80_BUS_WIDTH 16
+#define SKN_LCD_PIXEL_CLOCK_HZ     (4 * 1000 * 1000)
+#define SKN_LCD_I80_BUS_WIDTH 16
 
 
-#define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL  1
-#define EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL !EXAMPLE_LCD_BK_LIGHT_ON_LEVEL
-#define EXAMPLE_PIN_NUM_DATA0          47
-#define EXAMPLE_PIN_NUM_DATA1          21
-#define EXAMPLE_PIN_NUM_DATA2          14
-#define EXAMPLE_PIN_NUM_DATA3          13
-#define EXAMPLE_PIN_NUM_DATA4          12
-#define EXAMPLE_PIN_NUM_DATA5          11
-#define EXAMPLE_PIN_NUM_DATA6          10
-#define EXAMPLE_PIN_NUM_DATA7          9
-#define EXAMPLE_PIN_NUM_DATA8          3
-#define EXAMPLE_PIN_NUM_DATA9          8
-#define EXAMPLE_PIN_NUM_DATA10         16
-#define EXAMPLE_PIN_NUM_DATA11         15
-#define EXAMPLE_PIN_NUM_DATA12         7
-#define EXAMPLE_PIN_NUM_DATA13         6
-#define EXAMPLE_PIN_NUM_DATA14         5
-#define EXAMPLE_PIN_NUM_DATA15         4
+#define SKN_LCD_BK_LIGHT_ON_LEVEL  1
+#define SKN_LCD_BK_LIGHT_OFF_LEVEL !SKN_LCD_BK_LIGHT_ON_LEVEL
+#define SKN_PIN_NUM_DATA0          47
+#define SKN_PIN_NUM_DATA1          21
+#define SKN_PIN_NUM_DATA2          14
+#define SKN_PIN_NUM_DATA3          13
+#define SKN_PIN_NUM_DATA4          12
+#define SKN_PIN_NUM_DATA5          11
+#define SKN_PIN_NUM_DATA6          10
+#define SKN_PIN_NUM_DATA7          9
+#define SKN_PIN_NUM_DATA8          3
+#define SKN_PIN_NUM_DATA9          8
+#define SKN_PIN_NUM_DATA10         16
+#define SKN_PIN_NUM_DATA11         15
+#define SKN_PIN_NUM_DATA12         7
+#define SKN_PIN_NUM_DATA13         6
+#define SKN_PIN_NUM_DATA14         5
+#define SKN_PIN_NUM_DATA15         4
 
-#define EXAMPLE_PIN_NUM_PCLK           18
-#define EXAMPLE_PIN_NUM_CS             -1
-#define EXAMPLE_PIN_NUM_DC             45
-#define EXAMPLE_PIN_NUM_RST            48
-#define EXAMPLE_PIN_NUM_BK_LIGHT       46
+#define SKN_PIN_NUM_PCLK           18
+#define SKN_PIN_NUM_CS             -1
+#define SKN_PIN_NUM_DC             45
+#define SKN_PIN_NUM_RST            48
+#define SKN_PIN_NUM_BK_LIGHT       46
 
 // The pixel number in horizontal and vertical
-#define EXAMPLE_LCD_H_RES              320
-#define EXAMPLE_LCD_V_RES              480
+#define SKN_LCD_H_RES              320
+#define SKN_LCD_V_RES              480
 // Bit number used to represent command and parameter
-#define EXAMPLE_LCD_CMD_BITS           8
-#define EXAMPLE_LCD_PARAM_BITS         8
+#define SKN_LCD_CMD_BITS           8
+#define SKN_LCD_PARAM_BITS         8
 
-#define EXAMPLE_LVGL_TICK_PERIOD_MS    2
+#define SKN_LVGL_TICK_PERIOD_MS    2
 
-extern void skoona_demo_ui(lv_obj_t *scr);
+extern void skn_demo_ui(lv_obj_t *scr);
+esp_lcd_touch_handle_t tp;
 
-static bool example_notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
+static bool skn_notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
 {
     lv_disp_drv_t *disp_driver = (lv_disp_drv_t *)user_ctx;
     lv_disp_flush_ready(disp_driver);
     return false;
 }
 
-static void example_lvgl_flush_cb(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map)
+static void skn_lvgl_flush_cb(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_map)
 {
     esp_lcd_panel_handle_t panel_handle = (esp_lcd_panel_handle_t) drv->user_data;
     int offsetx1 = area->x1;
@@ -80,10 +82,10 @@ static void example_lvgl_flush_cb(lv_disp_drv_t *drv, const lv_area_t *area, lv_
     esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
 }
 
-static void example_increase_lvgl_tick(void *arg)
+static void skn_increase_lvgl_tick(void *arg)
 {
     /* Tell LVGL how many milliseconds has elapsed */
-    lv_tick_inc(EXAMPLE_LVGL_TICK_PERIOD_MS);
+    lv_tick_inc(SKN_LVGL_TICK_PERIOD_MS);
 }
 
 void app_main(void)
@@ -94,45 +96,45 @@ void app_main(void)
     ESP_LOGI(TAG, "Turn off LCD backlight");
     gpio_config_t bk_gpio_config = {
         .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << EXAMPLE_PIN_NUM_BK_LIGHT
+        .pin_bit_mask = 1ULL << SKN_PIN_NUM_BK_LIGHT
     };
     ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
-    gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL);
+    gpio_set_level(SKN_PIN_NUM_BK_LIGHT, SKN_LCD_BK_LIGHT_OFF_LEVEL);
 
     ESP_LOGI(TAG, "Initialize Intel 8080 bus");
     esp_lcd_i80_bus_handle_t i80_bus = NULL;
     esp_lcd_i80_bus_config_t bus_config = {
         .clk_src = LCD_CLK_SRC_DEFAULT,
-        .dc_gpio_num = EXAMPLE_PIN_NUM_DC,
-        .wr_gpio_num = EXAMPLE_PIN_NUM_PCLK,
+        .dc_gpio_num = SKN_PIN_NUM_DC,
+        .wr_gpio_num = SKN_PIN_NUM_PCLK,
         .data_gpio_nums = {
-            EXAMPLE_PIN_NUM_DATA0,
-            EXAMPLE_PIN_NUM_DATA1,
-            EXAMPLE_PIN_NUM_DATA2,
-            EXAMPLE_PIN_NUM_DATA3,
-            EXAMPLE_PIN_NUM_DATA4,
-            EXAMPLE_PIN_NUM_DATA5,
-            EXAMPLE_PIN_NUM_DATA6,
-            EXAMPLE_PIN_NUM_DATA7,
-            EXAMPLE_PIN_NUM_DATA8,
-            EXAMPLE_PIN_NUM_DATA9,
-            EXAMPLE_PIN_NUM_DATA10,
-            EXAMPLE_PIN_NUM_DATA11,
-            EXAMPLE_PIN_NUM_DATA12,
-            EXAMPLE_PIN_NUM_DATA13,
-            EXAMPLE_PIN_NUM_DATA14,
-            EXAMPLE_PIN_NUM_DATA15,
+            SKN_PIN_NUM_DATA0,
+            SKN_PIN_NUM_DATA1,
+            SKN_PIN_NUM_DATA2,
+            SKN_PIN_NUM_DATA3,
+            SKN_PIN_NUM_DATA4,
+            SKN_PIN_NUM_DATA5,
+            SKN_PIN_NUM_DATA6,
+            SKN_PIN_NUM_DATA7,
+            SKN_PIN_NUM_DATA8,
+            SKN_PIN_NUM_DATA9,
+            SKN_PIN_NUM_DATA10,
+            SKN_PIN_NUM_DATA11,
+            SKN_PIN_NUM_DATA12,
+            SKN_PIN_NUM_DATA13,
+            SKN_PIN_NUM_DATA14,
+            SKN_PIN_NUM_DATA15,
 
         },
-        .bus_width = EXAMPLE_LCD_I80_BUS_WIDTH,
-        .max_transfer_bytes = EXAMPLE_LCD_H_RES * 100 * sizeof(uint16_t)
+        .bus_width = SKN_LCD_I80_BUS_WIDTH,
+        .max_transfer_bytes = SKN_LCD_H_RES * 100 * sizeof(uint16_t)
     };
     ESP_ERROR_CHECK(esp_lcd_new_i80_bus(&bus_config, &i80_bus));
 
     esp_lcd_panel_io_handle_t io_handle = NULL;
     esp_lcd_panel_io_i80_config_t io_config = {
-        .cs_gpio_num = EXAMPLE_PIN_NUM_CS,
-        .pclk_hz = EXAMPLE_LCD_PIXEL_CLOCK_HZ,
+        .cs_gpio_num = SKN_PIN_NUM_CS,
+        .pclk_hz = SKN_LCD_PIXEL_CLOCK_HZ,
         .trans_queue_depth = 10,
         .dc_levels = {
             .dc_idle_level = 0,
@@ -140,21 +142,21 @@ void app_main(void)
             .dc_dummy_level = 0,
             .dc_data_level = 1,
         },
-        .on_color_trans_done = example_notify_lvgl_flush_ready,
+        .on_color_trans_done = skn_notify_lvgl_flush_ready,
         .user_ctx = &disp_drv,
-        .lcd_cmd_bits = EXAMPLE_LCD_CMD_BITS,
-        .lcd_param_bits = EXAMPLE_LCD_PARAM_BITS,
+        .lcd_cmd_bits = SKN_LCD_CMD_BITS,
+        .lcd_param_bits = SKN_LCD_PARAM_BITS,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_i80(i80_bus, &io_config, &io_handle));
 
     ESP_LOGI(TAG, "Install LCD driver of ili9488");
     esp_lcd_panel_handle_t panel_handle = NULL;
     esp_lcd_panel_dev_config_t panel_config = {
-        .reset_gpio_num = EXAMPLE_PIN_NUM_RST,
+        .reset_gpio_num = SKN_PIN_NUM_RST,
         .color_space = ESP_LCD_COLOR_SPACE_RGB,
         .bits_per_pixel = 16,
     };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_ili9488(io_handle, &panel_config,EXAMPLE_LCD_H_RES * 20 * sizeof(lv_color_t), &panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_ili9488(io_handle, &panel_config,SKN_LCD_H_RES * 20 * sizeof(lv_color_t), &panel_handle));
 
     esp_lcd_panel_reset(panel_handle);
     esp_lcd_panel_init(panel_handle);
@@ -163,24 +165,24 @@ void app_main(void)
     esp_lcd_panel_set_gap(panel_handle, 0, 0);
 
     ESP_LOGI(TAG, "Turn on LCD backlight");
-    gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL);
+    gpio_set_level(SKN_PIN_NUM_BK_LIGHT, SKN_LCD_BK_LIGHT_ON_LEVEL);
 
     ESP_LOGI(TAG, "Initialize LVGL library");
     lv_init();
     // alloc draw buffers used by LVGL
     // it's recommended to choose the size of the draw buffer(s) to be at least 1/10 screen sized
-    lv_color_t *buf1 = heap_caps_malloc(EXAMPLE_LCD_H_RES * 20 * sizeof(lv_color_t), MALLOC_CAP_DMA);
+    lv_color_t *buf1 = heap_caps_malloc(SKN_LCD_H_RES * 20 * sizeof(lv_color_t), MALLOC_CAP_DMA);
     assert(buf1);
-    lv_color_t *buf2 = heap_caps_malloc(EXAMPLE_LCD_H_RES * 20 * sizeof(lv_color_t), MALLOC_CAP_DMA);
+    lv_color_t *buf2 = heap_caps_malloc(SKN_LCD_H_RES * 20 * sizeof(lv_color_t), MALLOC_CAP_DMA);
     assert(buf2);
     // initialize LVGL draw buffers
-    lv_disp_draw_buf_init(&disp_buf, buf1, buf2, EXAMPLE_LCD_H_RES * 20);
+    lv_disp_draw_buf_init(&disp_buf, buf1, buf2, SKN_LCD_H_RES * 20);
 
     ESP_LOGI(TAG, "Register display driver to LVGL");
     lv_disp_drv_init(&disp_drv);
-    disp_drv.hor_res = EXAMPLE_LCD_H_RES;
-    disp_drv.ver_res = EXAMPLE_LCD_V_RES;
-    disp_drv.flush_cb = example_lvgl_flush_cb;
+    disp_drv.hor_res = SKN_LCD_H_RES;
+    disp_drv.ver_res = SKN_LCD_V_RES;
+    disp_drv.flush_cb = skn_lvgl_flush_cb;
     disp_drv.draw_buf = &disp_buf;
     disp_drv.user_data = panel_handle;
     lv_disp_t *disp = lv_disp_drv_register(&disp_drv);
@@ -188,22 +190,44 @@ void app_main(void)
     ESP_LOGI(TAG, "Install LVGL tick timer");
     // Tick interface for LVGL (using esp_timer to generate 2ms periodic event)
     const esp_timer_create_args_t lvgl_tick_timer_args = {
-        .callback = &example_increase_lvgl_tick,
+        .callback = &skn_increase_lvgl_tick,
         .name = "lvgl_tick"
     };
     esp_timer_handle_t lvgl_tick_timer = NULL;
     ESP_ERROR_CHECK(esp_timer_create(&lvgl_tick_timer_args, &lvgl_tick_timer));
-    ESP_ERROR_CHECK(esp_timer_start_periodic(lvgl_tick_timer, EXAMPLE_LVGL_TICK_PERIOD_MS * 1000));
+    ESP_ERROR_CHECK(esp_timer_start_periodic(lvgl_tick_timer, SKN_LVGL_TICK_PERIOD_MS * 1000));
 
     ESP_LOGI(TAG, "Display LVGL animation");
     lv_obj_t *scr = lv_disp_get_scr_act(disp);
 
-    lv_obj_t *label = lv_label_create(scr);
+    // Initialize Touch Controller
+	esp_lcd_panel_io_i2c_config_t io_cfg = ESP_LCD_TOUCH_IO_I2C_FT6x36_CONFIG();
+	esp_lcd_touch_config_t tp_cfg = {
+		.x_max = SKN_LCD_H_RES,
+		.y_max = SKN_LCD_V_RES,
+		.rst_gpio_num = -1,
+		.int_gpio_num = -1,
+		.levels =
+			{
+				.reset = 0,
+				.interrupt = 0,
+			},
+		.flags =
+			{
+				.swap_xy = 0,
+				.mirror_x = 0,
+				.mirror_y = 1,  // 0
+			},
+	};
+	esp_lcd_touch_new_i2c_ft6x36(io_handle, &tp_cfg, &tp);
+
+    // create label
+	lv_obj_t *label = lv_label_create(scr);
 	lv_label_set_text(label, "Hello World!");
 	lv_obj_center(label);
 	
 
-		skoona_demo_ui(scr);
+		skn_demo_ui(scr);
 
 	while (1) {
         // raise the task priority of LVGL and/or reduce the handler period can improve the performance
