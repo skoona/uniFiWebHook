@@ -38,7 +38,7 @@ dependencies:
     version: 1.2.1
   espressif/esp_lv_decoder:
     component_hash: 
-      37b32a1b0acc01bd7a1946eb51f41682d2049486f9a5653ac54f73cd9e87cb0d
+      0eb7b2bceaf73484ef80f5004337ee31617b2450a3d40621812998a47e7dd349
     dependencies:
     - name: espressif/esp_new_jpeg
       registry_url: https://components.espressif.com
@@ -67,7 +67,7 @@ dependencies:
     - esp32c3
     - esp32c5
     - esp32c6
-    version: 0.3.1
+    version: 0.3.2
   espressif/esp_new_jpeg:
     component_hash: 
       e6af208a875abd0ecfc0213d3751a11b504b463ebde6930f24096047925fa5c1
@@ -130,5 +130,5 @@ direct_dependencies:
 - idf
 - lvgl/lvgl
 manifest_hash: 4cce26709c9e6ca7780cb7f7245755eb5d06fbe4349d6ff0ddbbeaed5e479e44
-target: esp32
+target: esp32s3
 version: 2.0.0
