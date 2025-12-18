@@ -84,7 +84,14 @@ void skn_demo_ui(lv_obj_t *scr) {
     lv_img_set_src(img_logo, &skoonaIcon);
     lv_obj_center(img_logo);
 */
-    // Create arcs
+	// ESP_LOGI(TAG, "Display LVGL animation");
+
+	// create label
+	lv_obj_t *label = lv_label_create(scr);
+	lv_label_set_text(label, "Hello World!");
+	lv_obj_center(label);
+
+	// Create arcs
     for (size_t i = 0; i < sizeof(arc) / sizeof(arc[0]); i++) {
         arc[i] = lv_arc_create(scr);
 
