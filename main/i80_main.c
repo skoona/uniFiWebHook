@@ -63,13 +63,8 @@ static const char *TAG = "SKN";
 
 #define SKN_LVGL_TICK_PERIOD_MS    2
 
-extern void skn_demo_ui(lv_obj_t *scr);
 esp_lcd_touch_handle_t tp;
 esp_lcd_panel_io_handle_t tp_io_handle = NULL;
-
-#define I2C_MASTER_TX_BUF_DISABLE 0 /*!< I2C master doesn't need buffer */
-#define I2C_MASTER_RX_BUF_DISABLE 0 /*!< I2C master doesn't need buffer */
-#define I2C_SLAVE_ADDRESS (FT6236_I2C_SLAVE_ADDR)
 
 static void skn_lvgl_touch_cb(lv_indev_drv_t *drv, lv_indev_data_t *data) {
 	uint16_t touchpad_x[1] = {0};
@@ -93,7 +88,7 @@ static void skn_lvgl_touch_cb(lv_indev_drv_t *drv, lv_indev_data_t *data) {
 	}
 }
 /**
- * @brief i2c master initialization
+ * @brief i2c FT6236 initialization
  */
 static lv_indev_t * touch_init(lv_disp_t *disp) {
 
@@ -304,17 +299,13 @@ void app_main(void)
 	lv_disp_t *disp = display_init();
 
 	// Initialize Touch Controller
-	lv_indev_t *touch_device = touch_init(disp);
+	// lv_indev_t *touch_device = touch_init(disp);
+	touch_init(disp);
 
-	// skn_demo_ui(scr);
 	lv_demo_widgets();
 
-		while (1) {
-		// raise the task priority of LVGL and/or reduce the handler period can
-		// improve the performance
+	while (1) {
 		vTaskDelay(pdMS_TO_TICKS(10));
-		// The task running lv_timer_handler should have lower priority than that
-		// running `lv_tick_inc`
 		lv_timer_handler();
 	}
 }
