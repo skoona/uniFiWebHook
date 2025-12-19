@@ -243,15 +243,13 @@ lv_disp_t *display_init() {
 		.bits_per_pixel = 16,
 	};
 	ESP_ERROR_CHECK(esp_lcd_new_panel_ili9488(
-		io_handle, &panel_config, SKN_LCD_H_RES * 100 * sizeof(lv_color_t),
+		io_handle, &panel_config, SKN_LCD_H_RES * SKN_BUFFER_FACTOR * sizeof(lv_color_t),
 		&panel_handle));
 
 	esp_lcd_panel_reset(panel_handle);
 	esp_lcd_panel_init(panel_handle);
 	esp_lcd_panel_swap_xy(panel_handle, false);
 	esp_lcd_panel_invert_color(panel_handle, false);
-	// the gap is LCD panel specific, even panels with the same driver IC, can
-	// have different gap value
 	esp_lcd_panel_set_gap(panel_handle, 0, 0);
 
 	ESP_LOGI(TAG, "Turn on LCD backlight");
@@ -259,9 +257,6 @@ lv_disp_t *display_init() {
 
 	ESP_LOGI(TAG, "Initialize LVGL library");
 	lv_init();
-	// alloc draw buffers used by LVGL
-	// it's recommended to choose the size of the draw buffer(s) to be at least
-	// 1/10 screen sized
 	lv_color_t *buf1 = heap_caps_malloc(
 		SKN_LCD_H_RES * SKN_BUFFER_FACTOR * sizeof(lv_color_t), MALLOC_CAP_DMA);
 	assert(buf1);
