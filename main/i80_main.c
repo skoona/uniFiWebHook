@@ -119,7 +119,7 @@ void skn_touch_init() {
 		.scl_io_num = 39,
 		.sda_pullup_en = GPIO_PULLUP_ENABLE,
 		.scl_pullup_en = GPIO_PULLUP_ENABLE,
-		.master.clk_speed = 100000,
+		.master.clk_speed = 400000,
 	};
 	/* Initialize I2C */
 	ESP_ERROR_CHECK(i2c_param_config(I2C_NUM_0, &i2c_conf));
