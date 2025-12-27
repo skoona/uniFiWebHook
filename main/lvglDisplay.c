@@ -1,7 +1,8 @@
 /*
- * SPDX-FileCopyrightText: 2021 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: CC0-1.0
+ * LVGL 9+, ILI9488, and Touch FT6436
+ * skoona@gmail.com
+ * 12/29/2025
+ * LVGL Template
  */
 
 #include "driver/gpio.h"
@@ -16,61 +17,61 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "lv_demos.h"
 #include "lvgl.h"
 #include <stdio.h>
-#include "lv_demos.h"
 
 static const char *TAG = "SKN";
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////// Please update the following configuration according to your LCD spec //////////////////////////////
+//////////////////// Please update the following configuration according to your
+///LCD spec //////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // The pixel number in horizontal and vertical
-#define SKN_LCD_H_RES              320
-#define SKN_LCD_V_RES              480
-#define SKN_LCD_PIXEL_CLOCK_HZ     (20 * 1024 * 1024)
-#define SKN_LCD_I80_BUS_WIDTH      16
-#define SKN_LCD_FACTOR             48
-#define SKN_LVGL_PRIORITY           4
-#define SKN_LVGL_STACK_SZ        8192
+#define SKN_LCD_H_RES 320
+#define SKN_LCD_V_RES 480
+#define SKN_LCD_PIXEL_CLOCK_HZ (20 * 1024 * 1024)
+#define SKN_LCD_I80_BUS_WIDTH 16
+#define SKN_LCD_FACTOR 48
 
 // -- LV_MEM = 56K
-#define SKN_COLOR_BYTE_SZ    sizeof(lv_color_t)
-#define SKN_TRANSFER_BUFF_SZ (SKN_LCD_H_RES * (SKN_LCD_FACTOR+2) * SKN_COLOR_BYTE_SZ)
-#define SKN_COLOR_I80_SZ     (SKN_LCD_H_RES * SKN_LCD_FACTOR)
-#define SKN_DRAW_PIXEL_CNT   (SKN_COLOR_I80_SZ * SKN_COLOR_BYTE_SZ)
-#define SKN_DRAW_BUFF_SZ     SKN_DRAW_PIXEL_CNT
+#define SKN_COLOR_BYTE_SZ sizeof(lv_color_t)
+#define SKN_TRANSFER_BUFF_SZ                                                   \
+	(SKN_LCD_H_RES * (SKN_LCD_FACTOR + 2) * SKN_COLOR_BYTE_SZ)
+#define SKN_COLOR_I80_SZ (SKN_LCD_H_RES * SKN_LCD_FACTOR)
+#define SKN_DRAW_PIXEL_CNT (SKN_COLOR_I80_SZ * SKN_COLOR_BYTE_SZ)
+#define SKN_DRAW_BUFF_SZ SKN_DRAW_PIXEL_CNT
 
-#define SKN_LCD_BK_LIGHT_ON_LEVEL  1
+#define SKN_LCD_BK_LIGHT_ON_LEVEL 1
 #define SKN_LCD_BK_LIGHT_OFF_LEVEL !SKN_LCD_BK_LIGHT_ON_LEVEL
-#define SKN_PIN_NUM_DATA0          47
-#define SKN_PIN_NUM_DATA1          21
-#define SKN_PIN_NUM_DATA2          14
-#define SKN_PIN_NUM_DATA3          13
-#define SKN_PIN_NUM_DATA4          12
-#define SKN_PIN_NUM_DATA5          11
-#define SKN_PIN_NUM_DATA6          10
-#define SKN_PIN_NUM_DATA7          9
-#define SKN_PIN_NUM_DATA8          3
-#define SKN_PIN_NUM_DATA9          8
-#define SKN_PIN_NUM_DATA10         16
-#define SKN_PIN_NUM_DATA11         15
-#define SKN_PIN_NUM_DATA12         7
-#define SKN_PIN_NUM_DATA13         6
-#define SKN_PIN_NUM_DATA14         5
-#define SKN_PIN_NUM_DATA15         4
+#define SKN_PIN_NUM_DATA0 47
+#define SKN_PIN_NUM_DATA1 21
+#define SKN_PIN_NUM_DATA2 14
+#define SKN_PIN_NUM_DATA3 13
+#define SKN_PIN_NUM_DATA4 12
+#define SKN_PIN_NUM_DATA5 11
+#define SKN_PIN_NUM_DATA6 10
+#define SKN_PIN_NUM_DATA7 9
+#define SKN_PIN_NUM_DATA8 3
+#define SKN_PIN_NUM_DATA9 8
+#define SKN_PIN_NUM_DATA10 16
+#define SKN_PIN_NUM_DATA11 15
+#define SKN_PIN_NUM_DATA12 7
+#define SKN_PIN_NUM_DATA13 6
+#define SKN_PIN_NUM_DATA14 5
+#define SKN_PIN_NUM_DATA15 4
 
-#define SKN_PIN_NUM_PCLK           18
-#define SKN_PIN_NUM_CS             -1
-#define SKN_PIN_NUM_DC             45
-#define SKN_PIN_NUM_RST            48
-#define SKN_PIN_NUM_BK_LIGHT       46
+#define SKN_PIN_NUM_PCLK 18
+#define SKN_PIN_NUM_CS -1
+#define SKN_PIN_NUM_DC 45
+#define SKN_PIN_NUM_RST 48
+#define SKN_PIN_NUM_BK_LIGHT 46
 
 // Bit number used to represent command and parameter
-#define SKN_LCD_CMD_BITS           8
-#define SKN_LCD_PARAM_BITS         8
+#define SKN_LCD_CMD_BITS 8
+#define SKN_LCD_PARAM_BITS 8
 
-#define SKN_LVGL_TICK_PERIOD_MS    2
+#define SKN_LVGL_TICK_PERIOD_MS 2
 
 void skn_lvgl_touch_cb(lv_indev_t *drv, lv_indev_data_t *data) {
 	uint8_t touchpad_cnt = 0;
@@ -79,36 +80,38 @@ void skn_lvgl_touch_cb(lv_indev_t *drv, lv_indev_data_t *data) {
 	/* Read touch controller data */
 	esp_lcd_touch_read_data(drv->user_data);
 
-	esp_err_t err = esp_lcd_touch_get_data(drv->user_data, &touch_data, &touchpad_cnt, 1);
+	esp_err_t err =
+		esp_lcd_touch_get_data(drv->user_data, &touch_data, &touchpad_cnt, 1);
 	if (err == ESP_OK && touchpad_cnt > 0) {
 		data->point.x = touch_data.x;
 		data->point.y = touch_data.y;
 		data->state = LV_INDEV_STATE_PRESSED;
-        printf("-->Touch: X=%3.0ld,\tY=%3.0ld\n", data->point.x, data->point.y);
+		printf("-->Touch: X=%3.0ld,\tY=%3.0ld\n", data->point.x, data->point.y);
 	} else {
 		data->state = LV_INDEV_STATE_RELEASED;
 	}
 }
-
-bool skn_notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_io_event_data_t *edata, void *user_ctx)
-{
+bool skn_notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io,
+								 esp_lcd_panel_io_event_data_t *edata,
+								 void *user_ctx) {
 	lv_display_t *disp_driver = (lv_display_t *)user_ctx;
 	lv_disp_flush_ready(disp_driver);
-    return false;
+	return false;
 }
-void skn_lvgl_flush_cb(lv_display_t *display, const lv_area_t *area, uint8_t *color_map)
-{
-	esp_lcd_panel_handle_t panel_handle = (esp_lcd_panel_handle_t)display->user_data;
+void skn_lvgl_flush_cb(lv_display_t *display, const lv_area_t *area,
+					   uint8_t *color_map) {
+	esp_lcd_panel_handle_t panel_handle =
+		(esp_lcd_panel_handle_t)display->user_data;
 
 	int offsetx1 = area->x1;
-    int offsetx2 = area->x2;
-    int offsety1 = area->y1;
-    int offsety2 = area->y2;
-    esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
+	int offsetx2 = area->x2;
+	int offsety1 = area->y1;
+	int offsety2 = area->y2;
+	esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1,
+							  offsety2 + 1, color_map);
 	lv_display_flush_ready(display);
 }
 uint32_t skn_tick_cb(void) { return (uint32_t)esp_timer_get_time() / 1000ULL; }
-
 void skn_touch_init() {
 	esp_lcd_panel_io_handle_t tp_io_handle = NULL;
 	esp_lcd_touch_handle_t tp;
@@ -121,7 +124,7 @@ void skn_touch_init() {
 		.scl_io_num = 39,
 		.sda_pullup_en = GPIO_PULLUP_ENABLE,
 		.scl_pullup_en = GPIO_PULLUP_ENABLE,
-		.master.clk_speed = 100000,
+		.master.clk_speed = 400000,
 	};
 	/* Initialize I2C */
 	ESP_ERROR_CHECK(i2c_param_config(I2C_NUM_0, &i2c_conf));
@@ -150,7 +153,7 @@ void skn_touch_init() {
 			{
 				.swap_xy = 1, // rotated
 				.mirror_x = 1,
-				.mirror_y = 0, 
+				.mirror_y = 0,
 			},
 	};
 
@@ -158,7 +161,7 @@ void skn_touch_init() {
 	ESP_LOGI(TAG, "Initialize touch controller FT6x36");
 	ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_ft6x36(tp_io_handle, &tp_cfg, &tp));
 
-	/* Above Config has V/H swapped and flags set 
+	/* Above Config has V/H swapped and flags set
 		esp_lcd_touch_set_swap_xy(tp,true);
 		esp_lcd_touch_set_mirror_x(tp, true);
 		esp_lcd_touch_set_mirror_y(tp, false);
@@ -170,14 +173,13 @@ void skn_touch_init() {
 	lv_indev_set_read_cb(indev, skn_lvgl_touch_cb);
 	lv_indev_set_user_data(indev, tp);
 }
-void skn_display_init(void *pvParameters) {
+void skn_display_task(void *pvParameters) {
 
 	static lv_display_t *display; // contains callback functions
 
 	ESP_LOGI(TAG, "Turn off LCD backlight");
-	gpio_config_t bk_gpio_config = {.mode = GPIO_MODE_OUTPUT,
-									.pin_bit_mask =
-										1ULL << SKN_PIN_NUM_BK_LIGHT};
+	gpio_config_t bk_gpio_config = {
+		.mode = GPIO_MODE_OUTPUT, .pin_bit_mask = 1ULL << SKN_PIN_NUM_BK_LIGHT};
 	ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
 	gpio_set_level(SKN_PIN_NUM_BK_LIGHT, SKN_LCD_BK_LIGHT_OFF_LEVEL);
 
@@ -210,7 +212,7 @@ void skn_display_init(void *pvParameters) {
 		.bus_width = SKN_LCD_I80_BUS_WIDTH,
 		.max_transfer_bytes = SKN_TRANSFER_BUFF_SZ,
 		.psram_trans_align = 0,
-		.sram_trans_align = 0,		
+		.sram_trans_align = 0,
 	};
 	ESP_ERROR_CHECK(esp_lcd_new_i80_bus(&bus_config, &i80_bus));
 
@@ -244,20 +246,20 @@ void skn_display_init(void *pvParameters) {
 	esp_lcd_panel_dev_config_t panel_config = {
 		.reset_gpio_num = SKN_PIN_NUM_RST,
 		.color_space = ESP_LCD_COLOR_SPACE_RGB,
-		.bits_per_pixel = 16,		
+		.bits_per_pixel = 16,
 	};
-	ESP_ERROR_CHECK(esp_lcd_new_panel_ili9488(
-		io_handle, &panel_config, SKN_DRAW_BUFF_SZ, &panel_handle));
+	ESP_ERROR_CHECK(esp_lcd_new_panel_ili9488(io_handle, &panel_config,
+											  SKN_DRAW_BUFF_SZ, &panel_handle));
 
 	esp_lcd_panel_reset(panel_handle);
 	esp_lcd_panel_init(panel_handle);
 	esp_lcd_panel_invert_color(panel_handle, false);
 	esp_lcd_panel_set_gap(panel_handle, 0, 0);
 
-	/* 
+	/*
 	 * Rotate LCD display
-	 * - following lv_display_create has x/y/ reversed 
-	*/
+	 * - following lv_display_create has x/y/ reversed
+	 */
 	esp_lcd_panel_swap_xy(panel_handle, true);
 	esp_lcd_panel_mirror(panel_handle, true, false);
 
@@ -274,19 +276,19 @@ void skn_display_init(void *pvParameters) {
 
 	// initialize LVGL draw buffers
 	printf("Color Sz: %d\tlv_color_t: %d\tDraw buffer: %'.0u\tTransfer "
-			"buffer: %'.0u\tAlternate SZ: %'.0u\n",
-			lv_color_format_get_size(lv_display_get_color_format(display)),
-			sizeof(lv_color_t), 
-			SKN_DRAW_BUFF_SZ, 
-			SKN_TRANSFER_BUFF_SZ,
-			SKN_COLOR_I80_SZ
-		);
+		   "buffer: %'.0u\tAlternate SZ: %'.0u\n",
+		   lv_color_format_get_size(lv_display_get_color_format(display)),
+		   sizeof(lv_color_t), SKN_DRAW_BUFF_SZ, SKN_TRANSFER_BUFF_SZ,
+		   SKN_COLOR_I80_SZ);
 
-	uint8_t *buf1 = heap_caps_malloc(SKN_DRAW_BUFF_SZ, MALLOC_CAP_DMA | MALLOC_CAP_32BIT); 
-	assert(buf1); 
-	uint8_t *buf2 = heap_caps_malloc(SKN_DRAW_BUFF_SZ, MALLOC_CAP_DMA | MALLOC_CAP_32BIT); 
-	assert(buf2); 
-	lv_display_set_buffers(display, buf1, buf2, SKN_COLOR_I80_SZ, LV_DISPLAY_RENDER_MODE_PARTIAL);		
+	uint8_t *buf1 =
+		heap_caps_malloc(SKN_DRAW_BUFF_SZ, MALLOC_CAP_DMA | MALLOC_CAP_32BIT);
+	assert(buf1);
+	uint8_t *buf2 =
+		heap_caps_malloc(SKN_DRAW_BUFF_SZ, MALLOC_CAP_DMA | MALLOC_CAP_32BIT);
+	assert(buf2);
+	lv_display_set_buffers(display, buf1, buf2, SKN_COLOR_I80_SZ,
+						   LV_DISPLAY_RENDER_MODE_PARTIAL);
 
 	lv_display_set_flush_cb(display, skn_lvgl_flush_cb);
 	lv_display_set_user_data(display, panel_handle);
@@ -309,13 +311,4 @@ void skn_display_init(void *pvParameters) {
 		lv_timer_handler();
 		vTaskDelay(pdMS_TO_TICKS(5));
 	}
-}
-void app_main(void) {
-
-	xTaskCreatePinnedToCore(
-		skn_display_init, 
-		"SKN Display", 
-		SKN_LVGL_STACK_SZ, NULL, 
-		SKN_LVGL_PRIORITY, NULL, 
-		1);
 }
