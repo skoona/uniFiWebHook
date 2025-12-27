@@ -14,10 +14,10 @@
 #include "esp_lcd_panel_vendor.h"
 #include "esp_lcd_touch_ft6x36.h"
 #include "esp_log.h"
+#include "esp_lv_decoder.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "lv_demos.h"
 #include "lvgl.h"
 #include <stdio.h>
 
@@ -32,12 +32,11 @@ static const char *TAG = "SKN";
 #define SKN_LCD_V_RES 480
 #define SKN_LCD_PIXEL_CLOCK_HZ (20 * 1024 * 1024)
 #define SKN_LCD_I80_BUS_WIDTH 16
-#define SKN_LCD_FACTOR 48
+#define SKN_LCD_FACTOR 24
 
 // -- LV_MEM = 56K
 #define SKN_COLOR_BYTE_SZ sizeof(lv_color_t)
-#define SKN_TRANSFER_BUFF_SZ                                                   \
-	(SKN_LCD_H_RES * (SKN_LCD_FACTOR + 2) * SKN_COLOR_BYTE_SZ)
+#define SKN_TRANSFER_BUFF_SZ  (SKN_LCD_H_RES * (SKN_LCD_FACTOR + 2) * SKN_COLOR_BYTE_SZ)
 #define SKN_COLOR_I80_SZ (SKN_LCD_H_RES * SKN_LCD_FACTOR)
 #define SKN_DRAW_PIXEL_CNT (SKN_COLOR_I80_SZ * SKN_COLOR_BYTE_SZ)
 #define SKN_DRAW_BUFF_SZ SKN_DRAW_PIXEL_CNT
@@ -73,15 +72,18 @@ static const char *TAG = "SKN";
 
 #define SKN_LVGL_TICK_PERIOD_MS 2
 
+extern void ui_skoona_page(lv_obj_t *scr);
+
 void skn_lvgl_touch_cb(lv_indev_t *drv, lv_indev_data_t *data) {
 	uint8_t touchpad_cnt = 0;
 	esp_lcd_touch_point_data_t touch_data;
+	esp_lcd_touch_handle_t tp = (esp_lcd_touch_handle_t)drv->user_data;
 
 	/* Read touch controller data */
-	esp_lcd_touch_read_data(drv->user_data);
+	esp_lcd_touch_read_data(tp);
 
 	esp_err_t err =
-		esp_lcd_touch_get_data(drv->user_data, &touch_data, &touchpad_cnt, 1);
+		esp_lcd_touch_get_data(tp, &touch_data, &touchpad_cnt, 1);
 	if (err == ESP_OK && touchpad_cnt > 0) {
 		data->point.x = touch_data.x;
 		data->point.y = touch_data.y;
@@ -113,9 +115,6 @@ void skn_lvgl_flush_cb(lv_display_t *display, const lv_area_t *area,
 }
 uint32_t skn_tick_cb(void) { return (uint32_t)esp_timer_get_time() / 1000ULL; }
 void skn_touch_init() {
-	esp_lcd_panel_io_handle_t tp_io_handle = NULL;
-	esp_lcd_touch_handle_t tp;
-
 	ESP_LOGI(TAG, "Initialize I2C");
 
 	const i2c_config_t i2c_conf = {
@@ -126,7 +125,7 @@ void skn_touch_init() {
 		.scl_pullup_en = GPIO_PULLUP_ENABLE,
 		.master.clk_speed = 400000,
 	};
-	/* Initialize I2C */
+	// Initialize I2C 
 	ESP_ERROR_CHECK(i2c_param_config(I2C_NUM_0, &i2c_conf));
 	ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM_0, i2c_conf.mode, 0, 0, 0));
 
@@ -134,8 +133,7 @@ void skn_touch_init() {
 		ESP_LCD_TOUCH_IO_I2C_FT6x36_CONFIG();
 
 	ESP_LOGI(TAG, "Initialize touch IO (I2C)");
-
-	/* Touch IO handle */
+	esp_lcd_panel_io_handle_t tp_io_handle = NULL;
 	ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c(
 		(esp_lcd_i2c_bus_handle_t)I2C_NUM_0, &tp_io_config, &tp_io_handle));
 
@@ -159,6 +157,7 @@ void skn_touch_init() {
 
 	/* Initialize touch */
 	ESP_LOGI(TAG, "Initialize touch controller FT6x36");
+	esp_lcd_touch_handle_t tp;
 	ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_ft6x36(tp_io_handle, &tp_cfg, &tp));
 
 	/* Above Config has V/H swapped and flags set
@@ -296,16 +295,14 @@ void skn_display_task(void *pvParameters) {
 	// Initialize Touch Controller
 	skn_touch_init();
 
-	lv_demo_widgets();
-	// lv_demo_music();
+	// #define LV_USE_SJPG 1
+	// lv_split_jpeg_init();
+	esp_lv_decoder_handle_t decoder_handle = NULL;
+	esp_lv_decoder_init(&decoder_handle); // Initialize this after lvgl starts
 
-	/*
-	lv_obj_t *scr = lv_disp_get_scr_act(NULL);
-	// create label
-	lv_obj_t *label = lv_label_create(scr);
-	lv_label_set_text(label, "Hello from testing_ILI9488.");
-	lv_obj_center(label);
-*/
+	lv_lock();
+	ui_skoona_page(lv_display_get_screen_active(display));
+	lv_unlock();
 
 	while (1) {
 		lv_timer_handler();

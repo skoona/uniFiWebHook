@@ -1,0 +1,62 @@
+menu "UniFi Monitor Settings"
+    config PROTECT_API_ENDPOINT
+        string "UniFi Protect Api Endpoint"
+        default "https://10.100.1.1/proxy/protect/integration/v1/cameras"
+        help
+            Target endpoint host-name for the example to use.
+    config PROTECT_API_TOKEN
+        string "UniFi Protect Api Token"
+        default "8tBVk1cz8khtBclWJ4SqnQcY47m1Vzdu"
+        help
+            Security Token value for use with X-API-KEY
+    config CAMERA_EAST_VIEW_MAC
+        string "Mac Address of East View Camera"
+        default "70A7410B7593"
+        help
+            Colapsed 12 Digit MAC Address of Camera
+    config CAMERA_EAST_VIEW_ID
+        string "Camera Id value"
+        default "63559ad5007a960387002880"
+        help
+            Twenty-four digit id value for camera
+    config CAMERA_SOUTH_VIEW_MAC
+        string "Mac Address of East View Camera"
+        default "70A7410B7643"
+        help
+            Colapsed 12 Digit MAC Address of Camera
+    config CAMERA_SOUTH_VIEW_ID
+        string "Camera Id value"
+        default "6355cf55027c9603870029ed"
+        help
+            Twenty-four digit id value for camera
+    config CAMERA_KITCHEN_VIEW_MAC
+        string "Mac Address of East View Camera"
+        default "F4E2C60C4E6A"
+        help
+            Colapsed 12 Digit MAC Address of Camera
+    config CAMERA_KITCHEN_VIEW_ID
+        string "Camera Id value"
+        default "68cf46180060ac03e42f9125"
+        help
+            Twenty-four digit id value for camera
+    config CAMERA_GARAGE_VIEW_MAC
+        string "Mac Address of East View Camera"
+        default "70A7413F0FD7"
+        help
+            Colapsed 12 Digit MAC Address of Camera
+    config CAMERA_GARAGE_VIEW_ID
+        string "Camera Id value"
+        default "65b2e8d400858f03e4014f3a"
+        help
+            Twenty-four digit id value for camera
+    config CAMERA_FRONT_DOOR_MAC
+        string "Mac Address of East View Camera"
+        default "E063DA00602B"
+        help
+            Colapsed 12 Digit MAC Address of Camera
+    config CAMERA_FRONT_DOOR_ID
+        string "Camera Id value"
+        default "6096c66202197e0387001879"
+        help
+            Twenty-four digit id value for camera
+endmenu
