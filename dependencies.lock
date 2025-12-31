@@ -168,13 +168,6 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 9.4.0
-  protocol_examples_common:
-    dependencies: []
-    source:
-      path: 
-        /Users/jscott/ESP-IDF/v5.5.2/esp-idf/examples/common_components/protocol_examples_common
-      type: local
-    version: '*'
 direct_dependencies:
 - atanisoft/esp_lcd_ili9488
 - cfscn/esp_lcd_touch_ft6x36
@@ -184,7 +177,6 @@ direct_dependencies:
 - hfudev/json
 - idf
 - lvgl/lvgl
-- protocol_examples_common
-manifest_hash: d43bf8ade44a58a3a9aadcc9b8eb6cdcef4470be2d36e9e4c046c83c502931d6
+manifest_hash: 22c003ba53bb268cc6d66b32fd0c1ae9c57b56653e8d91b66ae603f35d4743d0
 target: esp32s3
 version: 2.0.0

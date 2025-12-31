@@ -15,11 +15,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const char *TAG = "LISTENER";
-extern QueueHandle_t urlQueue;
-static QueueHandle_t serverQueue;
+extern char *TAG; //  = "Listener";
+extern QueueHandle_t urlServiceQueue;
+static QueueHandle_t listenerServiceQueue;
 extern esp_err_t writeBinaryImageFile(char *path, void *buffer, int bufLen);
-extern void standBy(char *message);
 typedef struct _alarmRequest {
 	char uri[64];
 	char path[64];
@@ -37,7 +36,7 @@ esp_err_t writeBase64Buffer(char *path, const unsigned char *input_buffer) {
 	output_len = ((input_len + 3) / 3) * 4 + 1;
 	output_buffer = (unsigned char *)calloc(output_len, sizeof(unsigned char));
 	if (output_buffer == NULL) {
-		ESP_LOGE(TAG,"Failed to allocate [%d:%d] bytes for base64 output buffer for: %s",input_len, output_len, path);
+		ESP_LOGE("Listener","Failed to allocate [%d:%d] bytes for base64 output buffer for: %s",input_len, output_len, path);
 		return ESP_FAIL;		
 	}
 	// 'data:image/jpeg;base64,' = 23 bytes
@@ -47,7 +46,7 @@ esp_err_t writeBase64Buffer(char *path, const unsigned char *input_buffer) {
 		ret = writeBinaryImageFile(path, output_buffer, output_len);
 		
 	} else {
-		ESP_LOGE(TAG, "Failed to decode base64 contents for: %s", path);
+		ESP_LOGE("Listener", "Failed to decode base64 contents for: %s", path);
 		ret = ESP_FAIL;		
 	}
 	free(output_buffer); // Clean up memory
@@ -75,14 +74,14 @@ esp_err_t handleAlarms(char *device) {
 	} else if (strcmp(CONFIG_CAMERA_EAST_VIEW_MAC, device) == 0) { // East View
 		alarm_id = CONFIG_CAMERA_EAST_VIEW_ID;
 	} else {
-		ESP_LOGE(TAG, "Unknown Device: %s", device);
+		ESP_LOGE("Listener", "Unknown Device: %s", device);
 		return ESP_FAIL;
 	}
 
 	char url[254];
 
 	sprintf(url, "%s/%s/snapshot", CONFIG_PROTECT_API_ENDPOINT, alarm_id);
-	xQueueSend(urlQueue, url, 10);
+	xQueueSend(urlServiceQueue, url, 10);
 	return ESP_OK;
 }
 
@@ -99,27 +98,27 @@ esp_err_t processAlarmResponse(char *path, cJSON * root, char *target) {
 
 	alarm = cJSON_GetObjectItemCaseSensitive(root, "alarm");
 	if (alarm == NULL) {
-		ESP_LOGE(TAG, "Alarm element not found");
+		ESP_LOGE("Listener", "Alarm element not found");
 		return ESP_FAIL;
 	}
 	triggers = cJSON_GetObjectItemCaseSensitive(alarm, "triggers");
 	if (triggers == NULL) {
-		ESP_LOGE(TAG, "Triggers element not found");
+		ESP_LOGE("Listener", "Triggers element not found");
 		return ESP_FAIL;
 	}	
 	elem = cJSON_GetArrayItem(triggers, 0);
 	if (elem == NULL) {
-		ESP_LOGE(TAG, "First Element in triggers not found");
+		ESP_LOGE("Listener", "First Element in triggers not found");
 		return ESP_FAIL;
 	}
 	device = cJSON_GetObjectItemCaseSensitive(elem, "device");
 	if (device == NULL || !cJSON_IsString(device) || (device->valuestring == NULL)) {
-		ESP_LOGE(TAG, "Device element not found");
+		ESP_LOGE("Listener", "Device element not found");
 		return ESP_FAIL;
 	}
 	thumbnail = cJSON_GetObjectItemCaseSensitive(alarm, "thumbnail");
 	if (thumbnail == NULL || !cJSON_IsString(thumbnail) || (thumbnail->valuestring == NULL)) {
-		ESP_LOGE(TAG, "Thumbnail element not found");		
+		ESP_LOGE("Listener", "Thumbnail element not found");		
 		ret = ESP_FAIL;
 		strcpy(target, device->valuestring);
 	} else {				
@@ -137,7 +136,7 @@ esp_err_t handleWebhookResult(char *path, char *content, char *content_type, siz
 
 	cJSON *json = cJSON_Parse(content);
 	if (json == NULL) {
-		ESP_LOGI(TAG, "cJSON_Parse Failed: [L=%d]%s\n", bytes_received, content);
+		ESP_LOGI("Listener", "cJSON_Parse Failed: [L=%d]%s\n", bytes_received, content);
 		return ESP_FAIL;
 	}
 	
@@ -154,14 +153,13 @@ esp_err_t handleWebhookResult(char *path, char *content, char *content_type, siz
 static void vServerRequestsTask(void *pvParameters) {
 	AlarmRequest alarm = {0};		// Used to receive data
 	BaseType_t xReturn; // Used to receive return value
-	QueueHandle_t serverQueue = pvParameters;
+	QueueHandle_t listenerServiceQueue = pvParameters;
 	vTaskDelay(pdMS_TO_TICKS(1000));
 	while (1) {
-		xReturn = xQueueReceive(serverQueue, &alarm, pdMS_TO_TICKS(3000));
+		xReturn = xQueueReceive(listenerServiceQueue, &alarm, portMAX_DELAY);
 		if (xReturn == pdTRUE) {
-			ESP_LOGI(TAG, "Processing HTTP_POST webhook from: %s", alarm.uri);
-			handleWebhookResult(alarm.path, alarm.content, alarm.content_type,
-								alarm.received_len);
+			ESP_LOGI("Listener", "Processing HTTP_POST webhook from: %s", alarm.uri);
+			handleWebhookResult(alarm.path, alarm.content, alarm.content_type, alarm.received_len);
 			free(alarm.content);
 		}
 		vTaskDelay(pdMS_TO_TICKS(10));
@@ -226,12 +224,12 @@ esp_err_t unifi_cb(httpd_req_t *req) {
 	size_t received_len = 0;
 	size_t total_len = req->content_len;
 	size_t remaining_sz = total_len;
-	standBy("Please StandBy...");
 
-	content = calloc(content_len, sizeof(char)); // allocate 512KB
+	// content = calloc(content_len, sizeof(char)); // allocate 512KB
+	content = heap_caps_malloc(content_len, MALLOC_CAP_SPIRAM | MALLOC_CAP_32BIT);
 	if (content == NULL) { // Error or connection closed
         httpd_resp_send_500(req); // alloc error
-		ESP_LOGE(TAG, "Receive Buffer Allocation Failed, req->content_len: %d, content_len:%d", req->content_len, content_len);
+		ESP_LOGE("Listener", "Receive Buffer Allocation Failed, req->content_len: %d, content_len:%d", req->content_len, content_len);
         return ESP_FAIL;
     }
 
@@ -241,14 +239,14 @@ esp_err_t unifi_cb(httpd_req_t *req) {
 		bytes_received = httpd_req_recv(req, &content[received_len], remaining_sz);
 		if (bytes_received <= 0) { // Error or connection closed
 			if (bytes_received == HTTPD_SOCK_ERR_TIMEOUT) {
-				ESP_LOGE(TAG, "SOCKET Timeout Received. %s", req->uri);
+				ESP_LOGE("Listener", "SOCKET Timeout Received. %s", req->uri);
 				httpd_resp_send_408(req); // Request timeout
 			}
 			return ESP_FAIL;
 		}
 		received_len += bytes_received;
 		remaining_sz = total_len - received_len;
-		ESP_LOGI(TAG, "content_len:%d\treq->content_len:%d\ttotal_len:%d\tbytes_received:%d\treceived_len:%d\tremaining_sz:%d",
+		ESP_LOGI("Listener", "content_len:%d\treq->content_len:%d\ttotal_len:%d\tbytes_received:%d\treceived_len:%d\tremaining_sz:%d",
 			content_len, req->content_len, total_len, bytes_received, received_len,remaining_sz);
 	}
 	// Might be binary image: check headers 
@@ -258,7 +256,7 @@ esp_err_t unifi_cb(httpd_req_t *req) {
 
 	// Null-terminate the received data for string manipulation
 	content[received_len] = '\0';
-	ESP_LOGI(TAG, "Content-Type:%s total_len:%d req->content_len:%d", content_type, total_len, req->content_len);
+	ESP_LOGI("Listener", "Content-Type:%s total_len:%d req->content_len:%d", content_type, total_len, req->content_len);
 
 	AlarmRequest qAlarm = {0};
 	strncpy(qAlarm.path, path, sizeof(qAlarm.path));
@@ -268,7 +266,7 @@ esp_err_t unifi_cb(httpd_req_t *req) {
 	qAlarm.content = content;
 
 	// Send it to be processed
-	xQueueSend(serverQueue, &qAlarm, pdMS_TO_TICKS(10));
+	xQueueSend(listenerServiceQueue, &qAlarm, pdMS_TO_TICKS(10));
 
 	// Send a response back to the client
 	httpd_resp_set_status(req, "204 OK");
@@ -279,12 +277,12 @@ esp_err_t unifi_cb(httpd_req_t *req) {
 
 
 // Function to start the HTTP server
-httpd_handle_t start_http_listener(void) {
-    httpd_handle_t server = NULL;
+esp_err_t startListenerService(void) {
+	httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 
 	// Start the httpd server
-    ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
+    ESP_LOGI("Listener", "Starting server on port: '%d'", config.server_port);
     if (httpd_start(&server, &config) == ESP_OK) {
 
         // Register URI handlers
@@ -305,13 +303,16 @@ httpd_handle_t start_http_listener(void) {
         };
         httpd_register_uri_handler(server, &unifi_cb_uri);
 
-		serverQueue = xQueueCreate(8, sizeof(AlarmRequest));
-		if (serverQueue != NULL) {
+		listenerServiceQueue = xQueueCreate(10, sizeof(AlarmRequest));
+		if (listenerServiceQueue != NULL) {
 			xTaskCreatePinnedToCore(vServerRequestsTask, "vServerRequestsTask",
-									6144, serverQueue, 8, NULL,
+									8192, listenerServiceQueue, 24 , NULL,
 									tskNO_AFFINITY);
+		} else {
+			return ESP_FAIL;
 		}
+	} else {
+		return ESP_FAIL;
 	}
-    return server;
+	return ESP_OK;
 }
-

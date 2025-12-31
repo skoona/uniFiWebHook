@@ -15,7 +15,7 @@
 typedef struct {
     lv_obj_t *scr;
     int count_val;
-} my_timer_context_t;
+} anim_timer_context_t;
 
 static lv_obj_t *arc[3];
 static lv_obj_t *img_logo;
@@ -28,7 +28,7 @@ static lv_color_t arc_color[] = {
 
 static void anim_timer_cb(lv_timer_t *timer)
 {
-    my_timer_context_t *timer_ctx = (my_timer_context_t *) lv_timer_get_user_data(timer);
+    anim_timer_context_t *timer_ctx = (anim_timer_context_t *) lv_timer_get_user_data(timer);
     int count = timer_ctx->count_val;
     lv_obj_t *scr = timer_ctx->scr;
 
@@ -51,7 +51,7 @@ static void anim_timer_cb(lv_timer_t *timer)
 
         // Create new image and make it transparent
         img_text = lv_img_create(scr);
-		lv_img_set_src(img_text, "S:/spiffs/skoonallc.png"); // &esp_text);
+		lv_img_set_src(img_text, "S:/spiffs/skoonallc.png"); 
 		lv_obj_set_style_img_opa(img_text, 0, 0);
     }
 
@@ -75,7 +75,7 @@ void ui_skoona_page(lv_obj_t *scr)
 {
     // Create image
     img_logo = lv_img_create(scr);
-	lv_img_set_src(img_logo, "S:/spiffs/skoona-devel-icon.png"); // &esp_logo);
+	lv_img_set_src(img_logo, "S:/spiffs/skoona-devel-icon.png"); 
 	lv_image_set_scale(img_logo, 448);
     lv_obj_center(img_logo);
 
@@ -98,9 +98,9 @@ void ui_skoona_page(lv_obj_t *scr)
     }
 
     // Create timer for animation
-    static my_timer_context_t my_tim_ctx = {
-        .count_val = -90,
-    };
-    my_tim_ctx.scr = scr;
-    lv_timer_create(anim_timer_cb, 20, &my_tim_ctx);
+	static anim_timer_context_t anim_timer_context = {
+		.count_val = -90,
+	};
+	anim_timer_context.scr = scr;
+	lv_timer_create(anim_timer_cb, 20, &anim_timer_context);
 }
