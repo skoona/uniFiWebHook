@@ -108,6 +108,8 @@ mainmenu "ILI9488 RGB Applicaiton Setting"
         config LCD_WR_GPIO
             int "WR/PCLK GPIO"
             default 18
+    endmenu    
+    menu "ILI9488 LCD Data Pins"            
         config LCD_D00_GPIO
             int "D0 GPIO"
             default 47

@@ -28,13 +28,13 @@
 #define SKN_LVGL_STACK_SZ 9216 // 8192
 #define BEEP_DURATION_MS 500
 
-#define BUZZER_GPIO 20
-#define LEDC_TIMER LEDC_TIMER_0
-#define LEDC_MODE LEDC_LOW_SPEED_MODE
-#define LEDC_CHANNEL LEDC_CHANNEL_0
-#define LEDC_DUTY_RES LEDC_TIMER_13_BIT // 8191
-#define LEDC_DUTY (4095)				// 50% duty cycle (4095 out of 8191)
-#define LEDC_FREQUENCY (600)			// 2 kHz tone
+#define BUZZER_GPIO   20
+#define LEDC_TIMER     LEDC_TIMER_0
+#define LEDC_MODE      LEDC_LOW_SPEED_MODE
+#define LEDC_CHANNEL   LEDC_CHANNEL_0
+#define LEDC_DUTY_RES  LEDC_TIMER_13_BIT // 8191
+#define LEDC_DUTY      (4095)			 // 50% duty cycle (4095 out of 8191)
+#define LEDC_FREQUENCY (600)			 // Hz tone
 
 const char *TAG = "rgb_display";
 
