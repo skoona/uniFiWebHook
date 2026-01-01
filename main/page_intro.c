@@ -100,7 +100,7 @@ void ui_skoona_page(lv_obj_t *scr)
     // Create timer for animation
 	static anim_timer_context_t anim_timer_context = {
 		.count_val = -90,
-	};
+    };
 	anim_timer_context.scr = scr;
 	lv_timer_create(anim_timer_cb, 20, &anim_timer_context);
 }

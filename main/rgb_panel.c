@@ -20,7 +20,8 @@
 
 extern char *TAG; //  = "Display";
 
-// -- LV_MEM = 56K
+#define BEEP_DURATION_MS 500
+
 #define SKN_COLOR_BYTE_SZ     sizeof(uint16_t)
 #define SKN_I80_PIXELS_CNT    (CONFIG_LCD_H_RES * CONFIG_LCD_V_RES)
 #define SKN_DRAW_BUFF_SZ      ((SKN_I80_PIXELS_CNT / CONFIG_LCD_BUFFER_SIZE_FACTOR) * SKN_COLOR_BYTE_SZ )
@@ -31,15 +32,39 @@ const uint32_t panel_Hres = CONFIG_LCD_H_RES;
 const uint32_t panel_Vres = CONFIG_LCD_V_RES;
 extern QueueHandle_t imageServiceQueue;
 extern SemaphoreHandle_t spiffsMutex;
-
 extern void skn_touch_event_handler(lv_event_t *e);
 extern void ui_skoona_page(lv_obj_t *scr);
 extern void skn_touch_init();
 extern void logMemoryStats(char *message);
-void standBy(char *message);
+extern esp_err_t skn_beep_init();
+extern esp_err_t skn_beep();
+extern esp_err_t fileList();
 
 static lv_style_t image_style;
 
+void standBy(char *message) {
+	lv_obj_t *standby;
+	static lv_style_t style_red;
+
+	if (message == NULL)
+		return;
+
+	skn_beep(BEEP_DURATION_MS);
+	ESP_LOGI("Services", "standBy(): Enter...");
+
+	lv_style_init(&style_red);
+	lv_style_set_text_font(&style_red, &lv_font_montserrat_32);
+	lv_style_set_bg_color(&style_red, lv_color_make(128, 128, 128));
+	lv_style_set_bg_opa(&style_red, LV_OPA_COVER);
+	lv_style_set_text_color(&style_red, lv_color_make(0xff, 0x00, 0x00));
+
+	standby = lv_label_create(lv_screen_active());
+	lv_label_set_text(standby, message);
+	lv_obj_add_style(standby, &style_red, 0);
+	lv_obj_center(standby);
+
+	ESP_LOGI("Services", "standBy(): Exit...");
+}
 // A custom function to be called by an LVGL timer
 void skn_image_handler_cb(lv_timer_t *timer) {
 	
@@ -50,7 +75,13 @@ void skn_image_handler_cb(lv_timer_t *timer) {
 	static lv_obj_t *currentImage = NULL;
 	static lv_style_t image_style;
 	uint32_t startTime = esp_timer_get_time();
-		
+
+	lv_style_init(&image_style);
+	lv_style_set_y(&image_style, 2);
+	lv_style_set_max_height(&image_style, panel_Hres - 2);
+	lv_style_set_x(&image_style, 2);
+	lv_style_set_max_width(&image_style, panel_Vres - 2);
+
 	xReturn = xQueueReceive(ImageQueue, path, 0);
 	if (xReturn == pdTRUE) {
 		ESP_LOGI("ImageService", "skn_image_handler_cb() Entered...");
@@ -62,14 +93,10 @@ void skn_image_handler_cb(lv_timer_t *timer) {
 
 			currentImage = lv_img_create(lv_screen_active());
 			if (currentImage != NULL) {
-				lv_obj_set_style_bg_color(lv_screen_active(), lv_color_white(), 0);
-
 				sprintf(image, "S:%s", path);
 				lv_img_set_src(currentImage, image);
 				lv_obj_add_style(currentImage, &image_style, 0);
-
 				lv_image_set_inner_align(currentImage, LV_IMAGE_ALIGN_STRETCH);
-
 				ESP_LOGI("ImageService", "Completed processing for image file: %s", path);
 			} else {
 				ESP_LOGE("ImageService", "Failed to create image for %s", path);
@@ -114,7 +141,7 @@ void skn_lvgl_touch_cb(lv_indev_t *drv, lv_indev_data_t *data) {
 		data->point.x = touch_data.x;
 		data->point.y = touch_data.y;
 		data->state = LV_INDEV_STATE_PRESSED;
-		printf("-->Touch: X=%3.0ld,\tY=%3.0ld\n", data->point.x, data->point.y);
+		ESP_LOGD("Touch", "-->Touch: X=%3.0ld,\tY=%3.0ld\n", data->point.x, data->point.y);
 	} else {
 		data->state = LV_INDEV_STATE_RELEASED;
 	}
@@ -236,17 +263,11 @@ void vDisplayServiceTask(void *pvParameters) {
 	skn_touch_init();
 
 	esp_lv_decoder_handle_t decoder_handle = NULL;
-
 	esp_lv_decoder_init(&decoder_handle); // Initialize this after lvgl starts
+
 	lv_obj_t *scr = lv_obj_create(NULL);
 	lv_screen_load(scr);
-
-	lv_style_init(&image_style);
-	lv_style_set_y(&image_style, 2);
-	lv_style_set_max_height(&image_style, panel_Hres-2);
-	lv_style_set_x(&image_style, 2);
-	lv_style_set_max_width(&image_style, panel_Vres-2);
-
+	
 	ui_skoona_page(scr);
 	
 	lv_timer_create(skn_image_handler_cb, 3000, imageServiceQueue);
