@@ -20,52 +20,15 @@
 
 extern char *TAG; //  = "Display";
 
-#define SKN_LCD_H_RES 320
-#define SKN_LCD_V_RES 480
-#define SKN_LCD_PIXEL_CLOCK_HZ (20 * 1024 * 1024)
-#define SKN_LCD_I80_BUS_WIDTH 16
-#define SKN_LCD_FACTOR 16
-
 // -- LV_MEM = 56K
-#define SKN_COLOR_BYTE_SZ sizeof(uint16_t)
-#define SKN_I80_PIXELS_CNT (SKN_LCD_H_RES * SKN_LCD_V_RES)
-#define SKN_DRAW_BUFF_SZ    ((SKN_I80_PIXELS_CNT / SKN_LCD_FACTOR) * SKN_COLOR_BYTE_SZ ) // (SKN_LCD_H_RES * SKN_LCD_FACTOR * SKN_COLOR_BYTE_SZ)
+#define SKN_COLOR_BYTE_SZ     sizeof(uint16_t)
+#define SKN_I80_PIXELS_CNT    (CONFIG_LCD_H_RES * CONFIG_LCD_V_RES)
+#define SKN_DRAW_BUFF_SZ      ((SKN_I80_PIXELS_CNT / CONFIG_LCD_BUFFER_SIZE_FACTOR) * SKN_COLOR_BYTE_SZ )
 #define SKN_I80_COLOR_BUFF_SZ (SKN_DRAW_BUFF_SZ / 4 )
 #define SKN_TRANSFER_BUFF_SZ  (SKN_DRAW_BUFF_SZ  + 32)
 
-#define SKN_LCD_BK_LIGHT_ON_LEVEL 1
-#define SKN_LCD_BK_LIGHT_OFF_LEVEL !SKN_LCD_BK_LIGHT_ON_LEVEL
-#define SKN_PIN_NUM_DATA0 47
-#define SKN_PIN_NUM_DATA1 21
-#define SKN_PIN_NUM_DATA2 14
-#define SKN_PIN_NUM_DATA3 13
-#define SKN_PIN_NUM_DATA4 12
-#define SKN_PIN_NUM_DATA5 11
-#define SKN_PIN_NUM_DATA6 10
-#define SKN_PIN_NUM_DATA7 9
-#define SKN_PIN_NUM_DATA8 3
-#define SKN_PIN_NUM_DATA9 8
-#define SKN_PIN_NUM_DATA10 16
-#define SKN_PIN_NUM_DATA11 15
-#define SKN_PIN_NUM_DATA12 7
-#define SKN_PIN_NUM_DATA13 6
-#define SKN_PIN_NUM_DATA14 5
-#define SKN_PIN_NUM_DATA15 4
-
-#define SKN_PIN_NUM_PCLK 18
-#define SKN_PIN_NUM_CS -1
-#define SKN_PIN_NUM_DC 45
-#define SKN_PIN_NUM_RST 48
-#define SKN_PIN_NUM_BK_LIGHT 46
-
-// Bit number used to represent command and parameter
-#define SKN_LCD_CMD_BITS 8
-#define SKN_LCD_PARAM_BITS 8
-
-#define SKN_LVGL_TICK_PERIOD_MS 5
-
-const uint32_t panel_Hres = SKN_LCD_H_RES;
-const uint32_t panel_Vres = SKN_LCD_V_RES;
+const uint32_t panel_Hres = CONFIG_LCD_H_RES;
+const uint32_t panel_Vres = CONFIG_LCD_V_RES;
 extern QueueHandle_t imageServiceQueue;
 extern SemaphoreHandle_t spiffsMutex;
 
@@ -74,6 +37,8 @@ extern void ui_skoona_page(lv_obj_t *scr);
 extern void skn_touch_init();
 extern void logMemoryStats(char *message);
 void standBy(char *message);
+
+static lv_style_t image_style;
 
 // A custom function to be called by an LVGL timer
 void skn_image_handler_cb(lv_timer_t *timer) {
@@ -85,13 +50,7 @@ void skn_image_handler_cb(lv_timer_t *timer) {
 	static lv_obj_t *currentImage = NULL;
 	static lv_style_t image_style;
 	uint32_t startTime = esp_timer_get_time();
-	
-	lv_style_init(&image_style);
-	lv_style_set_y(&image_style, 2);
-	lv_style_set_max_height(&image_style, 318);
-	lv_style_set_x(&image_style, 2);
-	lv_style_set_max_width(&image_style, 478);
-	
+		
 	xReturn = xQueueReceive(ImageQueue, path, 0);
 	if (xReturn == pdTRUE) {
 		ESP_LOGI("ImageService", "skn_image_handler_cb() Entered...");
@@ -148,7 +107,6 @@ void skn_lvgl_touch_cb(lv_indev_t *drv, lv_indev_data_t *data) {
 	esp_lcd_touch_point_data_t touch_data;
 	esp_lcd_touch_handle_t tp = (esp_lcd_touch_handle_t)drv->user_data;
 
-	/* Read touch controller data */
 	esp_lcd_touch_read_data(tp);
 
 	esp_err_t err = esp_lcd_touch_get_data(tp, &touch_data, &touchpad_cnt, 1);
@@ -167,37 +125,36 @@ void vDisplayServiceTask(void *pvParameters) {
 
 	ESP_LOGI(TAG, "Turn off LCD backlight");
 	gpio_config_t bk_gpio_config = {
-		.mode = GPIO_MODE_OUTPUT, .pin_bit_mask = 1ULL << SKN_PIN_NUM_BK_LIGHT};
+		.mode = GPIO_MODE_OUTPUT, .pin_bit_mask = 1ULL << CONFIG_LCD_BACK_LIGHT_GPIO};
 	ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
-	gpio_set_level(SKN_PIN_NUM_BK_LIGHT, SKN_LCD_BK_LIGHT_OFF_LEVEL);
+	gpio_set_level(CONFIG_LCD_BACK_LIGHT_GPIO, !CONFIG_LCD_BACK_LIGHT_ON_LEVEL);
 
 	ESP_LOGI(TAG, "Initialize Intel 8080 bus");
 	esp_lcd_i80_bus_handle_t i80_bus = NULL;
 	esp_lcd_i80_bus_config_t bus_config = {
 		.clk_src = LCD_CLK_SRC_DEFAULT,
-		.dc_gpio_num = SKN_PIN_NUM_DC,
-		.wr_gpio_num = SKN_PIN_NUM_PCLK,
+		.dc_gpio_num = CONFIG_LCD_DC_GPIO,
+		.wr_gpio_num = CONFIG_LCD_WR_GPIO,
 		.data_gpio_nums =
 			{
-				SKN_PIN_NUM_DATA0,
-				SKN_PIN_NUM_DATA1,
-				SKN_PIN_NUM_DATA2,
-				SKN_PIN_NUM_DATA3,
-				SKN_PIN_NUM_DATA4,
-				SKN_PIN_NUM_DATA5,
-				SKN_PIN_NUM_DATA6,
-				SKN_PIN_NUM_DATA7,
-				SKN_PIN_NUM_DATA8,
-				SKN_PIN_NUM_DATA9,
-				SKN_PIN_NUM_DATA10,
-				SKN_PIN_NUM_DATA11,
-				SKN_PIN_NUM_DATA12,
-				SKN_PIN_NUM_DATA13,
-				SKN_PIN_NUM_DATA14,
-				SKN_PIN_NUM_DATA15,
-
+				CONFIG_LCD_D00_GPIO,
+				CONFIG_LCD_D01_GPIO,
+				CONFIG_LCD_D02_GPIO,
+				CONFIG_LCD_D03_GPIO,
+				CONFIG_LCD_D04_GPIO,
+				CONFIG_LCD_D05_GPIO,
+				CONFIG_LCD_D06_GPIO,
+				CONFIG_LCD_D07_GPIO,
+				CONFIG_LCD_D08_GPIO,
+				CONFIG_LCD_D09_GPIO,
+				CONFIG_LCD_D10_GPIO,
+				CONFIG_LCD_D11_GPIO,
+				CONFIG_LCD_D12_GPIO,
+				CONFIG_LCD_D13_GPIO,
+				CONFIG_LCD_D14_GPIO,
+				CONFIG_LCD_D15_GPIO,
 			},
-		.bus_width = SKN_LCD_I80_BUS_WIDTH,
+		.bus_width = CONFIG_LCD_BUS_WIDTH,
 		.max_transfer_bytes = SKN_TRANSFER_BUFF_SZ,
 		.psram_trans_align = 0,
 		.sram_trans_align = 0,
@@ -206,8 +163,8 @@ void vDisplayServiceTask(void *pvParameters) {
 
 	esp_lcd_panel_io_handle_t io_handle = NULL;
 	esp_lcd_panel_io_i80_config_t io_config = {
-		.cs_gpio_num = SKN_PIN_NUM_CS,
-		.pclk_hz = SKN_LCD_PIXEL_CLOCK_HZ,
+		.cs_gpio_num = CONFIG_LCD_CS_GPIO,
+		.pclk_hz = CONFIG_LCD_PIXEL_CLOCK_HZ,
 		.trans_queue_depth = 10,
 		.dc_levels =
 			{
@@ -218,8 +175,8 @@ void vDisplayServiceTask(void *pvParameters) {
 			},
 		.on_color_trans_done = skn_notify_lvgl_flush_ready,
 		.user_ctx = &display,
-		.lcd_cmd_bits = SKN_LCD_CMD_BITS,
-		.lcd_param_bits = SKN_LCD_PARAM_BITS,
+		.lcd_cmd_bits = CONFIG_LCD_CMD_BITS,
+		.lcd_param_bits = CONFIG_LCD_PARAM_BITS,
 		.flags =
 			{
 				.swap_color_bytes = false, // !CONFIG_LV_COLOR_16_SWAP,
@@ -232,9 +189,9 @@ void vDisplayServiceTask(void *pvParameters) {
 	ESP_LOGI(TAG, "Install LCD driver of ili9488");
 	esp_lcd_panel_handle_t panel_handle = NULL;
 	esp_lcd_panel_dev_config_t panel_config = {
-		.reset_gpio_num = SKN_PIN_NUM_RST,
+		.reset_gpio_num = CONFIG_LCD_RST_GPIO,
 		.color_space = ESP_LCD_COLOR_SPACE_BGR,
-		.bits_per_pixel = 16,
+		.bits_per_pixel = CONFIG_LCD_BUS_WIDTH,
 	};
 	ESP_ERROR_CHECK(esp_lcd_new_panel_ili9488(io_handle, &panel_config, SKN_I80_COLOR_BUFF_SZ, &panel_handle));
 
@@ -251,14 +208,14 @@ void vDisplayServiceTask(void *pvParameters) {
 	esp_lcd_panel_mirror(panel_handle, true, false);
 
 	ESP_LOGI(TAG, "Turn on LCD backlight");
-	gpio_set_level(SKN_PIN_NUM_BK_LIGHT, SKN_LCD_BK_LIGHT_ON_LEVEL);
+	gpio_set_level(CONFIG_LCD_BACK_LIGHT_GPIO, CONFIG_LCD_BACK_LIGHT_ON_LEVEL);
 
 	ESP_LOGI(TAG, "Initialize LVGL library");
 	lv_init();
 	lv_tick_set_cb(skn_tick_cb);
 
 	ESP_LOGI(TAG, "Register display driver to LVGL");
-	display = lv_display_create(SKN_LCD_V_RES, SKN_LCD_H_RES);
+	display = lv_display_create(CONFIG_LCD_V_RES, CONFIG_LCD_H_RES);
 
 	// initialize LVGL draw buffers
 	printf("Color Sz: %d\tlv_color_t: %d\tDraw buffer: %'.0u\tTransfer "
@@ -280,24 +237,23 @@ void vDisplayServiceTask(void *pvParameters) {
 
 	esp_lv_decoder_handle_t decoder_handle = NULL;
 
-	lv_lock();
-		esp_lv_decoder_init(&decoder_handle); // Initialize this after lvgl starts
-		lv_obj_t *scr = lv_obj_create(NULL);
-		lv_screen_load(scr);
+	esp_lv_decoder_init(&decoder_handle); // Initialize this after lvgl starts
+	lv_obj_t *scr = lv_obj_create(NULL);
+	lv_screen_load(scr);
 
-		ui_skoona_page(scr);
-	lv_unlock();
+	lv_style_init(&image_style);
+	lv_style_set_y(&image_style, 2);
+	lv_style_set_max_height(&image_style, panel_Hres-2);
+	lv_style_set_x(&image_style, 2);
+	lv_style_set_max_width(&image_style, panel_Vres-2);
 
+	ui_skoona_page(scr);
+	
+	lv_timer_create(skn_image_handler_cb, 3000, imageServiceQueue);
+	
 	logMemoryStats("END Startup");
 
-	lv_timer_create(skn_image_handler_cb, 3000, imageServiceQueue);
-
 	while (1) {
-		// lv_timer_handler();
-		// vTaskDelay(pdMS_TO_TICKS(5));
 		lv_timer_periodic_handler();
-		// lv_lock();
-		// lv_timer_handler_run_in_period(5);
-		// lv_unlock();
 	}
 }

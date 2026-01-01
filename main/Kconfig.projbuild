@@ -1,131 +1,235 @@
-menu "UniFi Monitor Settings"
-    config PROTECT_API_ENDPOINT
-        string "UniFi Protect Api Endpoint"
-        default "https://10.100.1.1/proxy/protect/integration/v1/cameras"
-        help
-            Target endpoint host-name for the example to use.
-    config PROTECT_API_TOKEN
-        string "UniFi Protect Api Token"
-        default "8tBVk1cz8khtBclWJ4SqnQcY47m1Vzdu"
-        help
-            Security Token value for use with X-API-KEY
-    config CAMERA_EAST_VIEW_MAC
-        string "Mac Address of East View Camera"
-        default "70A7410B7593"
-        help
-            Colapsed 12 Digit MAC Address of Camera
-    config CAMERA_EAST_VIEW_ID
-        string "Camera Id value"
-        default "63559ad5007a960387002880"
-        help
-            Twenty-four digit id value for camera
-    config CAMERA_SOUTH_VIEW_MAC
-        string "Mac Address of East View Camera"
-        default "70A7410B7643"
-        help
-            Colapsed 12 Digit MAC Address of Camera
-    config CAMERA_SOUTH_VIEW_ID
-        string "Camera Id value"
-        default "6355cf55027c9603870029ed"
-        help
-            Twenty-four digit id value for camera
-    config CAMERA_KITCHEN_VIEW_MAC
-        string "Mac Address of East View Camera"
-        default "F4E2C60C4E6A"
-        help
-            Colapsed 12 Digit MAC Address of Camera
-    config CAMERA_KITCHEN_VIEW_ID
-        string "Camera Id value"
-        default "68cf46180060ac03e42f9125"
-        help
-            Twenty-four digit id value for camera
-    config CAMERA_GARAGE_VIEW_MAC
-        string "Mac Address of East View Camera"
-        default "70A7413F0FD7"
-        help
-            Colapsed 12 Digit MAC Address of Camera
-    config CAMERA_GARAGE_VIEW_ID
-        string "Camera Id value"
-        default "65b2e8d400858f03e4014f3a"
-        help
-            Twenty-four digit id value for camera
-    config CAMERA_FRONT_DOOR_MAC
-        string "Mac Address of East View Camera"
-        default "E063DA00602B"
-        help
-            Colapsed 12 Digit MAC Address of Camera
-    config CAMERA_FRONT_DOOR_ID
-        string "Camera Id value"
-        default "6096c66202197e0387001879"
-        help
-            Twenty-four digit id value for camera
-endmenu
+mainmenu "ILI9488 RGB Applicaiton Setting"
+    menu "WiFi Station Configuration"
+        config ESP_WIFI_SSID
+            string "WiFi SSID"
+            default "myssid"
+            help
+                SSID (network name) for the example to connect to.
 
-menu "WiFi Station Configuration"
+        config ESP_WIFI_PASSWORD
+            string "WiFi Password"
+            default "mypassword"
+            help
+                WiFi password (WPA or WPA2) for the example to use.
 
-    config ESP_WIFI_SSID
-        string "WiFi SSID"
-        default "myssid"
-        help
-            SSID (network name) for the example to connect to.
+        choice ESP_WIFI_SAE_MODE
+            prompt "WPA3 SAE mode selection"
+            default ESP_STATION_EXAMPLE_WPA3_SAE_PWE_BOTH
+            help
+                Select mode for SAE as Hunt and Peck, H2E or both.
+            config ESP_STATION_EXAMPLE_WPA3_SAE_PWE_HUNT_AND_PECK
+                bool "HUNT AND PECK"
+            config ESP_STATION_EXAMPLE_WPA3_SAE_PWE_HASH_TO_ELEMENT
+                bool "H2E"
+                depends on ESP_WIFI_ENABLE_SAE_H2E
+            config ESP_STATION_EXAMPLE_WPA3_SAE_PWE_BOTH
+                bool "BOTH"
+                depends on ESP_WIFI_ENABLE_SAE_H2E
+        endchoice
 
-    config ESP_WIFI_PASSWORD
-        string "WiFi Password"
-        default "mypassword"
-        help
-            WiFi password (WPA or WPA2) for the example to use.
+        config ESP_WIFI_PW_ID
+            string "PASSWORD IDENTIFIER"
+            depends on  ESP_STATION_EXAMPLE_WPA3_SAE_PWE_HASH_TO_ELEMENT|| ESP_STATION_EXAMPLE_WPA3_SAE_PWE_BOTH
+            default ""
+            help
+                password identifier for SAE H2E
 
-    choice ESP_WIFI_SAE_MODE
-        prompt "WPA3 SAE mode selection"
-        default ESP_STATION_EXAMPLE_WPA3_SAE_PWE_BOTH
-        help
-            Select mode for SAE as Hunt and Peck, H2E or both.
-        config ESP_STATION_EXAMPLE_WPA3_SAE_PWE_HUNT_AND_PECK
-            bool "HUNT AND PECK"
-        config ESP_STATION_EXAMPLE_WPA3_SAE_PWE_HASH_TO_ELEMENT
-            bool "H2E"
-            depends on ESP_WIFI_ENABLE_SAE_H2E
-        config ESP_STATION_EXAMPLE_WPA3_SAE_PWE_BOTH
-            bool "BOTH"
-            depends on ESP_WIFI_ENABLE_SAE_H2E
-    endchoice
+        config ESP_MAXIMUM_RETRY
+            int "Maximum retry"
+            default 5
+            help
+                Set the Maximum retry to avoid station reconnecting to the AP unlimited when the AP is really inexistent.
 
-    config ESP_WIFI_PW_ID
-        string "PASSWORD IDENTIFIER"
-        depends on  ESP_STATION_EXAMPLE_WPA3_SAE_PWE_HASH_TO_ELEMENT|| ESP_STATION_EXAMPLE_WPA3_SAE_PWE_BOTH
-        default ""
-        help
-            password identifier for SAE H2E
+        choice ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD
+            prompt "WiFi Scan auth mode threshold"
+            default ESP_WIFI_AUTH_WPA2_PSK
+            help
+                The weakest authmode to accept in the scan mode.
+                This value defaults to ESP_WIFI_AUTH_WPA2_PSK in case password is present and ESP_WIFI_AUTH_OPEN is used.
+                Please select ESP_WIFI_AUTH_WEP/ESP_WIFI_AUTH_WPA_PSK in case AP is operating in WEP/WPA mode.
 
-    config ESP_MAXIMUM_RETRY
-        int "Maximum retry"
-        default 5
-        help
-            Set the Maximum retry to avoid station reconnecting to the AP unlimited when the AP is really inexistent.
-
-    choice ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD
-        prompt "WiFi Scan auth mode threshold"
-        default ESP_WIFI_AUTH_WPA2_PSK
-        help
-            The weakest authmode to accept in the scan mode.
-            This value defaults to ESP_WIFI_AUTH_WPA2_PSK in case password is present and ESP_WIFI_AUTH_OPEN is used.
-            Please select ESP_WIFI_AUTH_WEP/ESP_WIFI_AUTH_WPA_PSK in case AP is operating in WEP/WPA mode.
-
-        config ESP_WIFI_AUTH_OPEN
-            bool "OPEN"
-        config ESP_WIFI_AUTH_WEP
-            bool "WEP"
-        config ESP_WIFI_AUTH_WPA_PSK
-            bool "WPA PSK"
-        config ESP_WIFI_AUTH_WPA2_PSK
-            bool "WPA2 PSK"
-        config ESP_WIFI_AUTH_WPA_WPA2_PSK
-            bool "WPA/WPA2 PSK"
-        config ESP_WIFI_AUTH_WPA3_PSK
-            bool "WPA3 PSK"
-        config ESP_WIFI_AUTH_WPA2_WPA3_PSK
-            bool "WPA2/WPA3 PSK"
-        config ESP_WIFI_AUTH_WAPI_PSK
-            bool "WAPI PSK"
-    endchoice
-endmenu
+            config ESP_WIFI_AUTH_OPEN
+                bool "OPEN"
+            config ESP_WIFI_AUTH_WEP
+                bool "WEP"
+            config ESP_WIFI_AUTH_WPA_PSK
+                bool "WPA PSK"
+            config ESP_WIFI_AUTH_WPA2_PSK
+                bool "WPA2 PSK"
+            config ESP_WIFI_AUTH_WPA_WPA2_PSK
+                bool "WPA/WPA2 PSK"
+            config ESP_WIFI_AUTH_WPA3_PSK
+                bool "WPA3 PSK"
+            config ESP_WIFI_AUTH_WPA2_WPA3_PSK
+                bool "WPA2/WPA3 PSK"
+            config ESP_WIFI_AUTH_WAPI_PSK
+                bool "WAPI PSK"
+        endchoice
+    endmenu
+    menu "LCD Panel Resolution Settings"
+        config LCD_H_RES
+            int "Horizontal Pixels"
+            default 320
+        config LCD_V_RES
+            int "Vertical Pixels"
+            default 480
+        config LCD_CMD_BITS
+            int "LCD Command Bits"
+            default 8
+        config LCD_PARAM_BITS
+            int "LCD Param Bits"
+            default 8
+        config LCD_BUS_WIDTH
+            int "LCD Param Bits 16|8"
+            default 16            
+        config LCD_PIXEL_CLOCK_HZ
+            int "LCD Panel Speed"
+            default 20000000
+        config LCD_BUFFER_SIZE_FACTOR
+            int "Numeric factor used to determine bouble buffer and transfer buffer sizes, range 10 - 24, lower better"
+            default 10
+    endmenu    
+    menu "ILI9488 LCD Controller Settings"
+        config LCD_BACK_LIGHT_ON_LEVEL
+            int "Backlight Level"
+            default 1
+        config LCD_BACK_LIGHT_GPIO
+            int "Backlight GPIO"
+            default 46
+        config LCD_CS_GPIO
+            int "CS GPIO"
+            default -1
+        config LCD_RST_GPIO
+            int "Reset GPIO"
+            default 48
+        config LCD_DC_GPIO
+            int "Data command DC/RS"
+            default 45
+        config LCD_WR_GPIO
+            int "WR/PCLK GPIO"
+            default 18
+        config LCD_D00_GPIO
+            int "D0 GPIO"
+            default 47
+        config LCD_D01_GPIO
+            int "D1 GPIO"
+            default 21
+        config LCD_D02_GPIO
+            int "D2 GPIO"
+            default 14
+        config LCD_D03_GPIO
+            int "D3 GPIO"
+            default 13
+        config LCD_D04_GPIO
+            int "D4 GPIO"
+            default 12
+        config LCD_D05_GPIO
+            int "D5 GPIO"
+            default 11
+        config LCD_D06_GPIO
+            int "D6 GPIO"
+            default 10
+        config LCD_D07_GPIO
+            int "D7 GPIO"
+            default 9
+        config LCD_D08_GPIO
+            int "D8 GPIO"
+            default 3
+        config LCD_D09_GPIO
+            int "D9 GPIO"
+            default 8
+        config LCD_D10_GPIO
+            int "D10 GPIO"
+            default 16
+        config LCD_D11_GPIO
+            int "D11 GPIO"
+            default 15
+        config LCD_D12_GPIO
+            int "D12 GPIO"
+            default 7
+        config LCD_D13_GPIO
+            int "D13 GPIO"
+            default 6
+        config LCD_D14_GPIO
+            int "D14 GPIO"
+            default 5
+        config LCD_D15_GPIO
+            int "D15 GPIO"
+            default 4
+    endmenu
+    menu "FT6x36 Touch Settings"
+        config I2C_MASTER_FREQUENCY
+            int "I2C Speed"
+            default 100000
+        config I2C_MASTER_PORT_NUM 
+            int "Master I2C Port 0-2"
+            default 0
+        config TOUCH_I2C_SDA_GPIO
+            int "TOUCH SDA GPIO"
+            default 38
+        config TOUCH_I2C_SCK_GPIO
+            int "TOUCH SCK GPIO"
+            default 39
+    endmenu
+    menu "UniFi Monitor Settings"
+        config PROTECT_API_ENDPOINT
+            string "UniFi Protect Api Endpoint"
+            default "https://10.100.1.1/proxy/protect/integration/v1/cameras"
+            help
+                Target endpoint host-name for the example to use.
+        config PROTECT_API_TOKEN
+            string "UniFi Protect Api Token"
+            default "8tBVk1cz8khtBclWJ4SqnQcY47m1Vzdu"
+            help
+                Security Token value for use with X-API-KEY
+        config CAMERA_EAST_VIEW_MAC
+            string "Mac Address of East View Camera"
+            default "70A7410B7593"
+            help
+                Colapsed 12 Digit MAC Address of Camera
+        config CAMERA_EAST_VIEW_ID
+            string "Camera Id value"
+            default "63559ad5007a960387002880"
+            help
+                Twenty-four digit id value for camera
+        config CAMERA_SOUTH_VIEW_MAC
+            string "Mac Address of East View Camera"
+            default "70A7410B7643"
+            help
+                Colapsed 12 Digit MAC Address of Camera
+        config CAMERA_SOUTH_VIEW_ID
+            string "Camera Id value"
+            default "6355cf55027c9603870029ed"
+            help
+                Twenty-four digit id value for camera
+        config CAMERA_KITCHEN_VIEW_MAC
+            string "Mac Address of East View Camera"
+            default "F4E2C60C4E6A"
+            help
+                Colapsed 12 Digit MAC Address of Camera
+        config CAMERA_KITCHEN_VIEW_ID
+            string "Camera Id value"
+            default "68cf46180060ac03e42f9125"
+            help
+                Twenty-four digit id value for camera
+        config CAMERA_GARAGE_VIEW_MAC
+            string "Mac Address of East View Camera"
+            default "70A7413F0FD7"
+            help
+                Colapsed 12 Digit MAC Address of Camera
+        config CAMERA_GARAGE_VIEW_ID
+            string "Camera Id value"
+            default "65b2e8d400858f03e4014f3a"
+            help
+                Twenty-four digit id value for camera
+        config CAMERA_FRONT_DOOR_MAC
+            string "Mac Address of East View Camera"
+            default "E063DA00602B"
+            help
+                Colapsed 12 Digit MAC Address of Camera
+        config CAMERA_FRONT_DOOR_ID
+            string "Camera Id value"
+            default "6096c66202197e0387001879"
+            help
+                Twenty-four digit id value for camera
+    endmenu

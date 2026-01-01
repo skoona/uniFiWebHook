@@ -54,15 +54,15 @@ void skn_touch_init() {
 
 	const i2c_config_t i2c_conf = {
 		.mode = I2C_MODE_MASTER,
-		.sda_io_num = 38,
-		.scl_io_num = 39,
+		.sda_io_num = CONFIG_TOUCH_I2C_SDA_GPIO,
+		.scl_io_num = CONFIG_TOUCH_I2C_SCK_GPIO,
 		.sda_pullup_en = GPIO_PULLUP_ENABLE,
 		.scl_pullup_en = GPIO_PULLUP_ENABLE,
-		.master.clk_speed = 400000,
+		.master.clk_speed = CONFIG_I2C_MASTER_FREQUENCY,
 	};
 	// Initialize I2C
-	ESP_ERROR_CHECK(i2c_param_config(I2C_NUM_0, &i2c_conf));
-	ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM_0, i2c_conf.mode, 0, 0, 0));
+	ESP_ERROR_CHECK(i2c_param_config(CONFIG_I2C_MASTER_PORT_NUM, &i2c_conf));
+	ESP_ERROR_CHECK(i2c_driver_install(CONFIG_I2C_MASTER_PORT_NUM, i2c_conf.mode, 0, 0, 0));
 
 	esp_lcd_panel_io_i2c_config_t tp_io_config =
 		ESP_LCD_TOUCH_IO_I2C_FT6x36_CONFIG();
@@ -70,7 +70,7 @@ void skn_touch_init() {
 	ESP_LOGI("Touch", "Initialize touch IO (I2C)");
 	esp_lcd_panel_io_handle_t tp_io_handle = NULL;
 	ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c(
-		(esp_lcd_i2c_bus_handle_t)I2C_NUM_0, &tp_io_config, &tp_io_handle));
+		(esp_lcd_i2c_bus_handle_t)CONFIG_I2C_MASTER_PORT_NUM, &tp_io_config, &tp_io_handle));
 
 	esp_lcd_touch_config_t tp_cfg = {
 		.x_max = panel_Hres,
