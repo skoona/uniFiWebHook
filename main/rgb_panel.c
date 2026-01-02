@@ -40,8 +40,6 @@ extern esp_err_t skn_beep_init();
 extern esp_err_t skn_beep();
 extern esp_err_t fileList();
 
-static lv_style_t image_style;
-
 void standBy(char *message) {
 	lv_obj_t *standby;
 	static lv_style_t style_red;
@@ -65,7 +63,7 @@ void standBy(char *message) {
 
 	ESP_LOGI("Services", "standBy(): Exit...");
 }
-// A custom function to be called by an LVGL timer
+
 void skn_image_handler_cb(lv_timer_t *timer) {
 	
 	char path[256] = {0}; // Used to receive data
@@ -74,7 +72,7 @@ void skn_image_handler_cb(lv_timer_t *timer) {
 	QueueHandle_t ImageQueue = (QueueHandle_t)timer->user_data;
 	static lv_obj_t *currentImage = NULL;
 	static lv_style_t image_style;
-	uint32_t startTime = esp_timer_get_time();
+	uint64_t startTime = esp_timer_get_time();
 
 	lv_style_init(&image_style);
 	lv_style_set_y(&image_style, 2);
@@ -82,8 +80,10 @@ void skn_image_handler_cb(lv_timer_t *timer) {
 	lv_style_set_x(&image_style, 2);
 	lv_style_set_max_width(&image_style, panel_Vres - 2);
 
+
 	xReturn = xQueueReceive(ImageQueue, path, 0);
 	if (xReturn == pdTRUE) {
+		startTime = esp_timer_get_time();
 		ESP_LOGI("ImageService", "skn_image_handler_cb() Entered...");
 		if (xSemaphoreTake(spiffsMutex, portMAX_DELAY) == pdTRUE) {
 
@@ -103,7 +103,7 @@ void skn_image_handler_cb(lv_timer_t *timer) {
 			}
 			xSemaphoreGive(spiffsMutex);
 		}
-		ESP_LOGI("ImageService", "skn_image_handler_cb() Exiting... DurationMS: %ld",(esp_timer_get_time() - startTime) );
+		ESP_LOGI("ImageService", "skn_image_handler_cb() Exiting... DurationMicro: %lld", (esp_timer_get_time() - startTime) );
 	}
 }
 static bool skn_notify_lvgl_flush_ready(esp_lcd_panel_io_handle_t panel_io,
@@ -129,6 +129,7 @@ static void skn_lvgl_flush_cb(lv_display_t *display, const lv_area_t *area,
 static uint32_t skn_tick_cb(void) {
 	return (uint32_t)esp_timer_get_time() / 1000ULL;
 }
+
 void skn_lvgl_touch_cb(lv_indev_t *drv, lv_indev_data_t *data) {
 	uint8_t touchpad_cnt = 0;
 	esp_lcd_touch_point_data_t touch_data;
@@ -146,6 +147,7 @@ void skn_lvgl_touch_cb(lv_indev_t *drv, lv_indev_data_t *data) {
 		data->state = LV_INDEV_STATE_RELEASED;
 	}
 }
+
 void vDisplayServiceTask(void *pvParameters) {
 
 	static lv_display_t *display; // contains callback functions
@@ -269,9 +271,11 @@ void vDisplayServiceTask(void *pvParameters) {
 	lv_screen_load(scr);
 	
 	ui_skoona_page(scr);
-	
+
+	/*
+	 * Poll for Image Request every three seconds */	
 	lv_timer_create(skn_image_handler_cb, 3000, imageServiceQueue);
-	
+
 	logMemoryStats("END Startup");
 
 	while (1) {

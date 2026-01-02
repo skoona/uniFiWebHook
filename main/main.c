@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include "wifi_network.h"
 
 #define SKN_LVGL_PRIORITY 6
 #define SKN_LVGL_STACK_SZ 9216 // 8192
@@ -156,10 +157,10 @@ void app_main(void) {
 	
 	esp_log_level_set("*", ESP_LOG_INFO);
 	esp_log_level_set("transport", ESP_LOG_VERBOSE);
-	
-	startWiFiService();
-	skn_spiffs_mount();
-	skn_beep_init();
+
+	ESP_ERROR_CHECK(skn_wifi_service());
+	ESP_ERROR_CHECK(skn_spiffs_mount());
+	ESP_ERROR_CHECK(skn_beep_init());
 	
 	spiffsMutex = xSemaphoreCreateMutex();
 	imageServiceQueue = xQueueCreate(8, 256);
