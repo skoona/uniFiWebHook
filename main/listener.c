@@ -17,7 +17,7 @@
 
 extern char *TAG; //  = "Listener";
 extern QueueHandle_t urlServiceQueue;
-static QueueHandle_t listenerServiceQueue;
+QueueHandle_t listenerServiceQueue;
 extern esp_err_t writeBinaryImageFile(char *path, void *buffer, int bufLen);
 typedef struct _alarmRequest {
 	char uri[64];
@@ -81,7 +81,7 @@ esp_err_t handleAlarms(char *device) {
 	char url[254];
 
 	sprintf(url, "%s/%s/snapshot", CONFIG_PROTECT_API_ENDPOINT, alarm_id);
-	xQueueSend(urlServiceQueue, url, 10);
+	xQueueSend(urlServiceQueue, url, portMAX_DELAY);
 	return ESP_OK;
 }
 
@@ -153,7 +153,7 @@ esp_err_t handleWebhookResult(char *path, char *content, char *content_type, siz
 static void vServerRequestsTask(void *pvParameters) {
 	AlarmRequest alarm = {0};		// Used to receive data
 	BaseType_t xReturn; // Used to receive return value
-	QueueHandle_t listenerServiceQueue = pvParameters;
+	QueueHandle_t listenerServiceQueue = (QueueHandle_t)pvParameters;
 	vTaskDelay(pdMS_TO_TICKS(1000));
 	while (1) {
 		xReturn = xQueueReceive(listenerServiceQueue, &alarm, portMAX_DELAY);
@@ -266,7 +266,7 @@ esp_err_t unifi_cb(httpd_req_t *req) {
 	qAlarm.content = content;
 
 	// Send it to be processed
-	xQueueSend(listenerServiceQueue, &qAlarm, pdMS_TO_TICKS(10));
+	xQueueSend(listenerServiceQueue, &qAlarm, portMAX_DELAY);
 
 	// Send a response back to the client
 	httpd_resp_set_status(req, "204 OK");
@@ -303,12 +303,13 @@ esp_err_t startListenerService(void) {
         };
         httpd_register_uri_handler(server, &unifi_cb_uri);
 
-		listenerServiceQueue = xQueueCreate(10, sizeof(AlarmRequest));
+		listenerServiceQueue = xQueueCreate(32, sizeof(AlarmRequest));
 		if (listenerServiceQueue != NULL) {
 			xTaskCreatePinnedToCore(vServerRequestsTask, "vServerRequestsTask",
 									8192, listenerServiceQueue, 24 , NULL,
 									tskNO_AFFINITY);
 		} else {
+			ESP_LOGE("Listener", "ImageServiceQueue Create Failed");
 			return ESP_FAIL;
 		}
 	} else {

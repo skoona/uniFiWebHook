@@ -49,7 +49,7 @@ esp_err_t writeBinaryImageFile(char *path, void *buffer, int bufLen) {
 		xSemaphoreGive(spiffsMutex);
 		// Create image
 		vTaskDelay(pdMS_TO_TICKS(100));
-		xQueueSend(imageServiceQueue, path, 0);
+		xQueueSend(imageServiceQueue, path, portMAX_DELAY);
 	}
 	xSemaphoreGive(spiffsMutex);
 	return ESP_OK;
