@@ -143,20 +143,27 @@ void skn_beep(uint32_t duration_ms) {
 	ledc_update_duty(LEDC_MODE, LEDC_CHANNEL);
 }
 void logMemoryStats(char *message) {
+	char buffer[1024] = {0};
+
+	vTaskList(buffer);
+
 	ESP_LOGI(TAG, "[APP] %s...", message);
 	ESP_LOGI(TAG, "[APP] Free memory: %" PRIu32 " bytes", esp_get_free_heap_size());
 	ESP_LOGI(TAG, "Internal free heap size: %ld bytes", esp_get_free_internal_heap_size());
     ESP_LOGI(TAG, "PSRAM    free heap size: %ld bytes", esp_get_free_heap_size() - esp_get_free_internal_heap_size());
     ESP_LOGI(TAG, "Total    free heap size: %ld bytes", esp_get_free_heap_size());
+	ESP_LOGI(TAG, "Task List:\n%s", buffer);
 }
 
 void app_main(void) {
 	vTaskDelay(pdMS_TO_TICKS(1000));
 
-	logMemoryStats("BEGIN Startup") ;
-	
+	logMemoryStats("Startup Begining...");
+
 	esp_log_level_set("*", ESP_LOG_INFO);
 	esp_log_level_set("transport", ESP_LOG_VERBOSE);
+
+	ESP_ERROR_CHECK(esp_event_loop_create_default());
 
 	ESP_ERROR_CHECK(skn_wifi_service());
 	ESP_ERROR_CHECK(skn_spiffs_mount());
@@ -173,6 +180,7 @@ void app_main(void) {
 	}
 
 	startListenerService();
-	fileList();
+
 	skn_beep(BEEP_DURATION_MS);
+	logMemoryStats("Startup Complete...");
 }

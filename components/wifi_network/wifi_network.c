@@ -134,13 +134,6 @@ esp_err_t skn_wifi_service(void)
         return ret;
     }
 
-    ret = esp_event_loop_create_default();
-    if (ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to create default event loop");
-        return ret;
-    }
-
     ret = esp_wifi_set_default_wifi_sta_handlers();
     if (ret != ESP_OK)
     {

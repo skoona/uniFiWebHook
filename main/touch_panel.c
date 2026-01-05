@@ -23,6 +23,7 @@ extern QueueHandle_t urlServiceQueue;
 
 extern void skn_lvgl_touch_cb(lv_indev_t *drv, lv_indev_data_t *data);
 extern void unifi_async_api_request(esp_http_client_method_t method, char *path);
+extern void logMemoryStats(char *message);
 
 void skn_touch_event_handler(lv_event_t *e) {
 	lv_point_t p;
@@ -35,6 +36,7 @@ void skn_touch_event_handler(lv_event_t *e) {
 		   p.y, screen_width, screen_height);
 	if (p.y > (screen_height / 2)) {
 		printf("Get All Cameras: y=%ld\n", p.y);
+		logMemoryStats("Active Task List");
 		unifi_async_api_request(HTTP_METHOD_GET, CONFIG_PROTECT_API_ENDPOINT);
 		fileList();
 	} else if (p.x < (screen_width / 2)) {
