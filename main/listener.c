@@ -4,6 +4,10 @@
 
 #include "esp_err.h"
 #include "esp_heap_caps.h"
+#include "esp_system.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/idf_additions.h"
+#include "freertos/projdefs.h"
 #include "mbedtls/base64.h"
 #include <cJSON.h>
 #include <esp_event.h>
@@ -17,7 +21,9 @@
 
 extern char *TAG; //  = "Listener";
 extern QueueHandle_t urlServiceQueue;
-QueueHandle_t listenerServiceQueue;
+
+static QueueHandle_t listenerServiceQueue = NULL;
+
 extern esp_err_t writeBinaryImageFile(char *path, void *buffer, int bufLen);
 typedef struct _alarmRequest {
 	char uri[64];
@@ -133,6 +139,7 @@ esp_err_t processAlarmResponse(char *path, cJSON * root, char *target) {
 esp_err_t handleWebhookResult(char *path, char *content, char *content_type, size_t bytes_received) {
 	char device[32] = {'\0'};
 	memset(device, 0,sizeof(device));
+	esp_err_t ret;
 
 	cJSON *json = cJSON_Parse(content);
 	if (json == NULL) {
@@ -140,8 +147,8 @@ esp_err_t handleWebhookResult(char *path, char *content, char *content_type, siz
 		return ESP_FAIL;
 	}
 	
-	processAlarmResponse(path, json, device);
-	if (strlen(device) > 0) { // Image was included so no seperate request vi HandleAlarms()
+	ret = processAlarmResponse(path, json, device);
+	if ((ret == ESP_FAIL) && (strlen(device) > 0)) { // Image was included so no seperate request vi HandleAlarms()
 		handleAlarms(device);		
 	}
 
@@ -215,6 +222,7 @@ esp_err_t root_get_handler(httpd_req_t *req) {
 }
 */
 esp_err_t unifi_cb(httpd_req_t *req) {
+	static AlarmRequest qAlarm = {0};
 	char *content; 
 	char *path = "/spiffs/listener_event.jpg";
 
@@ -257,8 +265,7 @@ esp_err_t unifi_cb(httpd_req_t *req) {
 	// Null-terminate the received data for string manipulation
 	content[received_len] = '\0';
 	ESP_LOGI("Listener", "Content-Type:%s total_len:%d req->content_len:%d", content_type, total_len, req->content_len);
-
-	AlarmRequest qAlarm = {0};
+	
 	strncpy(qAlarm.path, path, sizeof(qAlarm.path));
 	strncpy(qAlarm.content_type, content_type, sizeof(qAlarm.content_type));
 	strncpy(qAlarm.uri, req->uri, sizeof(qAlarm.uri));	
@@ -266,7 +273,11 @@ esp_err_t unifi_cb(httpd_req_t *req) {
 	qAlarm.content = content;
 
 	// Send it to be processed
-	xQueueSend(listenerServiceQueue, &qAlarm, portMAX_DELAY);
+	if (listenerServiceQueue!=NULL) {
+		xQueueSend(listenerServiceQueue, &qAlarm, portMAX_DELAY);
+	} else {
+		ESP_LOGE("Listener", "Queue [listenerServiceQueue] is NULL");
+	}
 
 	// Send a response back to the client
 	httpd_resp_set_status(req, "204 OK");
@@ -303,10 +314,10 @@ esp_err_t startListenerService(void) {
         };
         httpd_register_uri_handler(server, &unifi_cb_uri);
 
-		listenerServiceQueue = xQueueCreate(32, sizeof(AlarmRequest));
+		listenerServiceQueue = xQueueCreate(5, sizeof(AlarmRequest));
 		if (listenerServiceQueue != NULL) {
 			xTaskCreatePinnedToCore(vServerRequestsTask, "vServerRequestsTask",
-									8192, listenerServiceQueue, 24 , NULL,
+									10240, listenerServiceQueue, 12 , NULL,
 									tskNO_AFFINITY);
 		} else {
 			ESP_LOGE("Listener", "ImageServiceQueue Create Failed");
