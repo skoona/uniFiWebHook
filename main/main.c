@@ -25,7 +25,7 @@
 #include <sys/stat.h>
 #include "wifi_network.h"
 
-#define SKN_LVGL_PRIORITY 6
+#define SKN_LVGL_PRIORITY 4
 #define SKN_LVGL_STACK_SZ 9216 // 8192
 #define BEEP_DURATION_MS 500
 
@@ -173,7 +173,7 @@ void app_main(void) {
 	imageServiceQueue = xQueueCreate(8, 256);
 	urlServiceQueue = xQueueCreate(4, 256);
 	if (imageServiceQueue != NULL) {
-		xTaskCreatePinnedToCore(vDisplayServiceTask, "SKN Display", SKN_LVGL_STACK_SZ, NULL, (SKN_LVGL_PRIORITY), NULL, 1);
+		xTaskCreatePinnedToCore(vDisplayServiceTask, "SKN Display", SKN_LVGL_STACK_SZ, imageServiceQueue, (SKN_LVGL_PRIORITY), NULL, 1);
 		xTaskCreatePinnedToCore(vUrlServiceTask, "Urlservice", 6144, urlServiceQueue, (SKN_LVGL_PRIORITY + 1), NULL, 1);
 	} else {
 		ESP_LOGE(TAG, "Display Queues Failed.");
