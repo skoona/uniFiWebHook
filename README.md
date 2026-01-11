@@ -13,6 +13,6 @@ Implements Webhook listener from UniFi Protect and displays the snapshot of the 
 Uses the UniFi Protect API to collect camera snapshots for two specific cameras, based on screen touches.
 
 ### See
-uniFiHomebridge
+[uniFiHomebridge](https://github.com/skoona/uniFiHomebridge)
 
 Author: skoona@gmail.com
