@@ -173,7 +173,7 @@ void app_main(void) {
 	imageServiceQueue = xQueueCreate(8, 256);
 	urlServiceQueue = xQueueCreate(4, 256);
 	if (imageServiceQueue != NULL) {
-		xTaskCreatePinnedToCore(vDisplayServiceTask, "SKN Display", SKN_LVGL_STACK_SZ, imageServiceQueue, (SKN_LVGL_PRIORITY), NULL, 1);
+		xTaskCreatePinnedToCore(vDisplayServiceTask, "SKN Display", SKN_LVGL_STACK_SZ, imageServiceQueue, (SKN_LVGL_PRIORITY), NULL, 0);
 		xTaskCreatePinnedToCore(vUrlServiceTask, "Urlservice", 6144, urlServiceQueue, (SKN_LVGL_PRIORITY + 1), NULL, 1);
 	} else {
 		ESP_LOGE(TAG, "Display Queues Failed.");
