@@ -3,4 +3,8 @@ build/*
 managed_components/*
 .vscode
 /build/
+.devcontainer
+.clangd
+dependencies.lock
 log.*.txt
+sdkconfig
